@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-import base64, zipfile, json, os, tempfile
+import base64, zipfile, os, tempfile
 from io import BytesIO
 from collections import defaultdict
 
@@ -219,6 +219,41 @@ def build_catalog(products, output_path, category='GENEL'):
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({'status': 'ok'})
+
+@app.route('/upload', methods=['POST'])
+def upload():
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'file yok'}), 400
+
+        categories = defaultdict(list)
+        for f in request.files.getlist('file'):
+            try:
+                xlsm_bytes = f.read()
+                p = parse_xlsm(xlsm_bytes)
+                categories[p['category'] or 'GENEL'].append(p)
+            except Exception as e:
+                print(f"Hata: {f.filename} → {e}")
+
+        results = []
+        for cat, products in categories.items():
+            with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
+                out_path = tmp.name
+            build_catalog(products, out_path, cat)
+            with open(out_path,'rb') as fh:
+                pdf_b64 = base64.b64encode(fh.read()).decode()
+            os.unlink(out_path)
+            results.append({
+                'category':      cat,
+                'filename':      f'katalog_{cat.replace(" ","_")}.pdf',
+                'pdf_base64':    pdf_b64,
+                'product_count': len(products),
+                'products':      [p['ref'] for p in products],
+            })
+        return jsonify({'catalogs': results})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/katalog', methods=['POST'])
 def katalog():
