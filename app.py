@@ -256,7 +256,6 @@ def build_catalog(products, output_path, category='GENEL'):
 def health():
     load_fonts()
     return jsonify({'status': 'ok', 'fonts': FONT_MAP})
-
 @app.route('/upload', methods=['POST'])
 def upload():
     try:
@@ -273,22 +272,31 @@ def upload():
             except Exception as e:
                 print(f"Hata: {f.filename} -> {e}")
 
-        results = []
+        # Sadece ilk kategoriyi PDF olarak döndür
         for cat, products in categories.items():
             with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
                 out_path = tmp.name
             build_catalog(products, out_path, cat)
-            with open(out_path,'rb') as fh:
-                pdf_b64 = base64.b64encode(fh.read()).decode()
+            
+            filename = f'katalog_{cat.replace(" ","_")}.pdf'
+            
+            with open(out_path, 'rb') as fh:
+                pdf_data = fh.read()
             os.unlink(out_path)
-            results.append({
-                'category':      cat,
-                'filename':      f'katalog_{cat.replace(" ","_")}.pdf',
-                'pdf_base64':    pdf_b64,
-                'product_count': len(products),
-                'products':      [p['ref'] for p in products],
-            })
-        return jsonify({'catalogs': results})
+            
+            from flask import Response
+            response = Response(
+                pdf_data,
+                mimetype='application/pdf',
+                headers={
+                    'Content-Disposition': f'attachment; filename="{filename}"',
+                    'X-Filename': filename,
+                    'X-Category': cat,
+                }
+            )
+            return response
+
+        return jsonify({'error': 'ürün bulunamadı'}), 400
 
     except Exception as e:
         import traceback
