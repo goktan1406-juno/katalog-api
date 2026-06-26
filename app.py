@@ -1,5 +1,5 @@
-from flask import Flask, request, jsonify
-import base64, zipfile, os, tempfile
+from flask import Flask, request, jsonify, Response
+import base64, zipfile, os, tempfile, json
 from io import BytesIO
 from collections import defaultdict
 
@@ -15,27 +15,13 @@ from PIL import Image, ImageFilter, ImageEnhance
 
 app = Flask(__name__)
 
-# Font yolları — birden fazla yer dene
 FONT_CANDIDATES = {
-    'Sans': [
-        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
-        '/usr/share/fonts/dejavu/DejaVuSans.ttf',
-        '/usr/share/fonts/truetype/DejaVuSans.ttf',
-    ],
-    'SansBold': [
-        '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
-        '/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf',
-        '/usr/share/fonts/truetype/DejaVuSans-Bold.ttf',
-    ],
-    'SansObl': [
-        '/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf',
-        '/usr/share/fonts/dejavu/DejaVuSans-Oblique.ttf',
-        '/usr/share/fonts/truetype/DejaVuSans-Oblique.ttf',
-    ],
+    'Sans':     ['/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'],
+    'SansBold': ['/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'],
+    'SansObl':  ['/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf'],
 }
-
 fonts_loaded = False
-FONT_MAP = {}  # hangi fontların yüklendiği
+FONT_MAP = {}
 
 def load_fonts():
     global fonts_loaded, FONT_MAP
@@ -50,15 +36,9 @@ def load_fonts():
                 except: pass
     fonts_loaded = True
 
-def get_font(name, fallback='Helvetica'):
-    """Font yüklendiyse onu kullan, yoksa Helvetica"""
-    return name if name in FONT_MAP else fallback
-
-def get_font_bold(fallback='Helvetica-Bold'):
-    return 'SansBold' if 'SansBold' in FONT_MAP else fallback
-
-def get_font_obl(fallback='Helvetica-Oblique'):
-    return 'SansObl' if 'SansObl' in FONT_MAP else fallback
+def F():  return 'SansBold' if 'SansBold' in FONT_MAP else 'Helvetica'
+def FB(): return 'SansBold' if 'SansBold' in FONT_MAP else 'Helvetica-Bold'
+def FO(): return 'SansObl'  if 'SansObl'  in FONT_MAP else 'Helvetica-Oblique'
 
 W, H  = A4
 RED   = colors.HexColor('#E8281A')
@@ -104,10 +84,12 @@ def parse_xlsm(xlsm_bytes):
         d = get(f'Benefit detail {i}')
         if t and t.lower() not in ('none','') and t not in seen:
             seen.add(t); product['benefits'].append((t,d))
-    product['images'] = extract_images(buf)
+    # Görselleri base64 olarak sakla
+    product['images_b64'] = extract_images_b64(buf)
     return product
 
-def extract_images(xlsm_buf):
+def extract_images_b64(xlsm_buf):
+    """Görselleri base64 string olarak döndür — JSON'a serileştirilebilir"""
     imgs = []
     xlsm_buf.seek(0)
     try:
@@ -117,55 +99,59 @@ def extract_images(xlsm_buf):
                 try:
                     im = Image.open(BytesIO(data))
                     if min(im.size) >= 200:
-                        imgs.append(prep_image(data))
-                        if len(imgs)==3: break
+                        imgs.append(base64.b64encode(data).decode())
+                        if len(imgs) == 3: break
                 except: pass
     except: pass
     return imgs
 
-def prep_image(data, target=900):
-    im = Image.open(BytesIO(data))
-    if im.mode=='P': im=im.convert('RGBA')
-    if im.mode=='RGBA':
-        bg=Image.new('RGB',im.size,(255,255,255)); bg.paste(im,mask=im.split()[3]); im=bg
-    else: im=im.convert('RGB')
-    w,h=im.size; s=max(w,h)
-    sq=Image.new('RGB',(s,s),(255,255,255)); sq.paste(im,((s-w)//2,(s-h)//2)); im=sq
-    if im.size[0]<target: im=im.resize((target,target),Image.LANCZOS)
-    im=im.filter(ImageFilter.UnsharpMask(radius=1.5,percent=150,threshold=2))
-    im=ImageEnhance.Contrast(im).enhance(1.05)
-    out=BytesIO(); im.save(out,'JPEG',quality=97); out.seek(0)
-    return ImageReader(out)
+def b64_to_imagereader(b64_str, target=900):
+    """base64 görsel → ImageReader"""
+    try:
+        data = base64.b64decode(b64_str)
+        im = Image.open(BytesIO(data))
+        if im.mode == 'P': im = im.convert('RGBA')
+        if im.mode == 'RGBA':
+            bg = Image.new('RGB', im.size, (255,255,255))
+            bg.paste(im, mask=im.split()[3]); im = bg
+        else: im = im.convert('RGB')
+        w,h = im.size; s = max(w,h)
+        sq = Image.new('RGB',(s,s),(255,255,255))
+        sq.paste(im,((s-w)//2,(s-h)//2)); im = sq
+        if im.size[0] < target: im = im.resize((target,target), Image.LANCZOS)
+        im = im.filter(ImageFilter.UnsharpMask(radius=1.5,percent=150,threshold=2))
+        im = ImageEnhance.Contrast(im).enhance(1.05)
+        out = BytesIO(); im.save(out,'JPEG',quality=97); out.seek(0)
+        return ImageReader(out)
+    except: return None
 
 def calc_card_h(product):
-    n=len(product['benefits'])
+    n = len(product.get('benefits', []))
     return max(65*mm, min(8*mm+5*mm+4.5*mm+4*mm + n*(4.5*mm+2*4.2*mm+1.5*mm) + 10*mm, 150*mm))
 
 def draw_page_chrome(cv, page_num, category):
-    F  = get_font('Sans')
-    FB = get_font_bold()
-    HDR=13*mm
+    HDR = 13*mm
     cv.setFillColor(DARK); cv.rect(0,H-HDR,W,HDR,fill=1,stroke=0)
     cv.setFillColor(RED);  cv.rect(0,H-HDR,3.5*mm,HDR,fill=1,stroke=0)
-    cv.setFillColor(WHITE); cv.setFont(FB,9)
+    cv.setFillColor(WHITE); cv.setFont(FB(),9)
     cv.drawString(8*mm,H-HDR+4.5*mm,str(category).upper())
-    cv.setFont(F,7.5); cv.setFillColor(MGRAY)
+    cv.setFont(F(),7.5); cv.setFillColor(MGRAY)
     cv.drawRightString(W-8*mm,H-HDR+4.5*mm,'Urun Katalogu 2024')
-    FTR=10*mm
+    FTR = 10*mm
     cv.setFillColor(LGRAY); cv.rect(0,0,W,FTR,fill=1,stroke=0)
     cv.setStrokeColor(MGRAY); cv.setLineWidth(0.3); cv.line(0,FTR,W,FTR)
-    cv.setFillColor(DGRAY); cv.setFont(F,6.5)
+    cv.setFillColor(DGRAY); cv.setFont(F(),6.5)
     cv.drawString(8*mm,3.5*mm,'2024 TEFAL')
     cv.drawRightString(W-8*mm,3.5*mm,'tefal.com.tr')
-    cv.setFillColor(DARK); cv.setFont(FB,7)
+    cv.setFillColor(DARK); cv.setFont(FB(),7)
     cv.drawCentredString(W/2,3.5*mm,f'{page_num} | TEFAL')
 
 def draw_card(cv, x, y, cw, ch, product):
-    F  = get_font('Sans')
-    FB = get_font_bold()
-    FO = get_font_obl()
+    imgs = [b64_to_imagereader(b) for b in product.get('images_b64',[])]
+    imgs = [i for i in imgs if i is not None]
+    n_imgs = len(imgs)
+
     PAD=4*mm; GAP=5*mm
-    imgs=product.get('images',[]); n_imgs=len(imgs)
     LW=(cw-2*PAD-GAP)*0.48 if n_imgs>0 else cw-2*PAD
     RW=(cw-2*PAD-GAP)*0.52 if n_imgs>0 else 0
     LX=x+PAD; RX=x+PAD+LW+GAP; BOT=y-ch
@@ -176,15 +162,15 @@ def draw_card(cv, x, y, cw, ch, product):
     cv.rect(x+1.5*mm,y-5*mm,1.5*mm,5*mm,fill=1,stroke=0)
 
     cy=y-PAD
-    cv.setFillColor(DARK); cv.setFont(FB,9)
-    for ln in wrap(cv,product['name'],FB,9,LW)[:2]:
+    cv.setFillColor(DARK); cv.setFont(FB(),9)
+    for ln in wrap(cv,product['name'],FB(),9,LW)[:2]:
         cv.drawString(LX,cy,ln); cy-=5.5*mm
     cy-=1*mm
 
     cv.setFillColor(LGRAY)
-    bw=tw(cv,product['ref'],F,6.5)+5*mm
+    bw=tw(cv,product['ref'],F(),6.5)+5*mm
     cv.roundRect(LX,cy-5*mm,bw,5*mm,1.5*mm,fill=1,stroke=0)
-    cv.setFillColor(DGRAY); cv.setFont(F,6.5)
+    cv.setFillColor(DGRAY); cv.setFont(F(),6.5)
     cv.drawString(LX+2.5*mm,cy-3.5*mm,product['ref']); cy-=8*mm
 
     cv.setStrokeColor(RED); cv.setLineWidth(1.5); cv.line(LX,cy,LX+LW*0.45,cy)
@@ -192,31 +178,32 @@ def draw_card(cv, x, y, cw, ch, product):
     cy-=4*mm
 
     if product.get('claim'):
-        cv.setFillColor(RED); cv.setFont(FO,7.5)
+        cv.setFillColor(RED); cv.setFont(FO(),7.5)
         claim=str(product['claim'])
-        while tw(cv,claim,FO,7.5)>LW and len(claim)>5: claim=claim[:-4]+'...'
+        while tw(cv,claim,FO(),7.5)>LW and len(claim)>5: claim=claim[:-4]+'...'
         cv.drawString(LX,cy,claim); cy-=4.5*mm
         cv.setStrokeColor(colors.HexColor('#EBEBEB')); cv.setLineWidth(0.25)
         cv.line(LX,cy,LX+LW,cy); cy-=2.5*mm
 
-    for title,detail in product['benefits']:
+    for title,detail in product.get('benefits',[]):
         if cy-4.5*mm<BOT+PAD+4*mm: break
-        cv.setFillColor(RED); cv.setFont(FB,9); cv.drawString(LX,cy-4.5*mm+1.5*mm,'*')
-        cv.setFillColor(DARK); cv.setFont(FB,7.5)
+        cv.setFillColor(RED); cv.setFont(FB(),9); cv.drawString(LX,cy-4.5*mm+1.5*mm,'*')
+        cv.setFillColor(DARK); cv.setFont(FB(),7.5)
         t=str(title)
-        while tw(cv,t,FB,7.5)>LW-5*mm and len(t)>5: t=t[:-2]+'.'
+        while tw(cv,t,FB(),7.5)>LW-5*mm and len(t)>5: t=t[:-2]+'.'
         cv.drawString(LX+4.5*mm,cy-4.5*mm+1.5*mm,t); cy-=4.5*mm
         if detail:
-            cv.setFillColor(DGRAY); cv.setFont(F,7.0)
-            for dl in wrap(cv,str(detail),F,7.0,LW-4.5*mm)[:2]:
+            cv.setFillColor(DGRAY); cv.setFont(F(),7.0)
+            for dl in wrap(cv,str(detail),F(),7.0,LW-4.5*mm)[:2]:
                 if cy-4.2*mm<BOT+PAD+4*mm: break
                 cv.drawString(LX+4.5*mm,cy-4.2*mm+1.5*mm,dl); cy-=4.2*mm
         cv.setStrokeColor(colors.HexColor('#F0F0F0')); cv.setLineWidth(0.2)
         cv.line(LX,cy-1*mm,LX+LW,cy-1*mm); cy-=1.5*mm
 
     cv.setFillColor(LGRAY); cv.roundRect(LX,BOT+2*mm,LW,6*mm,1*mm,fill=1,stroke=0)
-    cv.setFillColor(DGRAY); cv.setFont(F,6)
-    cv.drawString(LX+3*mm,BOT+4.5*mm,f"Kutu Icerigi: {str(product['name']).split(',')[0]} - {product['ref']}")
+    cv.setFillColor(DGRAY); cv.setFont(F(),6)
+    cv.drawString(LX+3*mm,BOT+4.5*mm,
+        f"Kutu Icerigi: {str(product['name']).split(',')[0]} - {product['ref']}")
 
     if n_imgs==0: return
     area_h=ch-2*PAD
@@ -231,13 +218,16 @@ def draw_card(cv, x, y, cw, ch, product):
     for i,(px,py,pw,ph) in enumerate(slots):
         if i>=len(imgs): break
         cv.setFillColor(LGRAY); cv.roundRect(px,py,pw,ph,2*mm,fill=1,stroke=0)
-        try: cv.drawImage(imgs[i],px+1.5*mm,py+1.5*mm,pw-3*mm,ph-3*mm,preserveAspectRatio=True,anchor='c',mask='auto')
+        try: cv.drawImage(imgs[i],px+1.5*mm,py+1.5*mm,pw-3*mm,ph-3*mm,
+                          preserveAspectRatio=True,anchor='c',mask='auto')
         except: pass
-        cv.setStrokeColor(MGRAY); cv.setLineWidth(0.4); cv.roundRect(px,py,pw,ph,2*mm,fill=0,stroke=1)
+        cv.setStrokeColor(MGRAY); cv.setLineWidth(0.4)
+        cv.roundRect(px,py,pw,ph,2*mm,fill=0,stroke=1)
 
-def build_catalog(products, output_path, category='GENEL'):
+def build_catalog_from_products(products, output_path, category):
+    """Ürün listesinden PDF oluştur"""
     load_fonts()
-    cv=canvas.Canvas(output_path,pagesize=A4)
+    cv = canvas.Canvas(output_path, pagesize=A4)
     cv.setTitle(f'TEFAL {category} Katalogu 2024')
     MARGIN=8*mm; HDR_H=13*mm; FTR_H=10*mm; CARD_GAP=4*mm; CARD_W=W-2*MARGIN
     page_num=1; current_y=H-HDR_H-5*mm
@@ -252,93 +242,90 @@ def build_catalog(products, output_path, category='GENEL'):
     cv.showPage(); cv.save()
     return output_path
 
+# ── Endpoints ─────────────────────────────────────────────────
+
 @app.route('/health', methods=['GET'])
 def health():
     load_fonts()
-    return jsonify({'status': 'ok', 'fonts': FONT_MAP})
+    return jsonify({'status': 'ok', 'fonts': list(FONT_MAP.keys())})
+
+@app.route('/add_product', methods=['POST'])
+def add_product():
+    """
+    n8n'den gelecek veri:
+    - file: xlsm binary
+    - state: mevcut state JSON (Drive'dan indirilmiş, opsiyonel)
+    
+    Döndürür:
+    - PDF binary (katalog_KATEGORI.pdf)
+    - Header: X-Category, X-Filename, X-State (güncel state JSON base64)
+    """
+    try:
+        load_fonts()
+
+        # xlsm oku
+        if 'file' not in request.files:
+            return jsonify({'error': 'file eksik'}), 400
+
+        xlsm_bytes = request.files['file'].read()
+        product = parse_xlsm(xlsm_bytes)
+        category = product['category'] or 'GENEL'
+
+        # Mevcut state'i oku (Drive'dan gelen JSON)
+        state = {}  # {ref: product_dict}
+        if 'state' in request.files:
+            try:
+                state_bytes = request.files['state'].read()
+                state = json.loads(state_bytes.decode('utf-8'))
+            except: pass
+
+        # Yeni ürünü state'e ekle/güncelle
+        state[product['ref']] = product
+
+        # Tüm ürünlerden PDF oluştur
+        products_list = list(state.values())
+
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
+            out_path = tmp.name
+
+        build_catalog_from_products(products_list, out_path, category)
+
+        with open(out_path,'rb') as fh:
+            pdf_data = fh.read()
+        os.unlink(out_path)
+
+        # State'i base64 olarak header'da döndür
+        state_b64 = base64.b64encode(
+            json.dumps(state, ensure_ascii=False).encode('utf-8')
+        ).decode()
+
+        safe_cat = category.replace(' ','_').replace('/','_').replace('&','and')
+        filename = f'katalog_{safe_cat}.pdf'
+        state_filename = f'state_{safe_cat}.json'
+
+        return Response(
+            pdf_data,
+            mimetype='application/pdf',
+            headers={
+                'Content-Disposition': f'attachment; filename="{filename}"',
+                'X-Filename':       filename,
+                'X-State-Filename': state_filename,
+                'X-Category':       category,
+                'X-Product-Ref':    product['ref'],
+                'X-Product-Count':  str(len(products_list)),
+                'X-State-B64':      state_b64,
+            }
+        )
+
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
+# Eski endpoint — geriye dönük uyumluluk
 @app.route('/upload', methods=['POST'])
 def upload():
-    try:
-        load_fonts()
-        if 'file' not in request.files:
-            return jsonify({'error': 'file yok'}), 400
-
-        categories = defaultdict(list)
-        for f in request.files.getlist('file'):
-            try:
-                xlsm_bytes = f.read()
-                p = parse_xlsm(xlsm_bytes)
-                categories[p['category'] or 'GENEL'].append(p)
-            except Exception as e:
-                print(f"Hata: {f.filename} -> {e}")
-
-        # Sadece ilk kategoriyi PDF olarak döndür
-        for cat, products in categories.items():
-            with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
-                out_path = tmp.name
-            build_catalog(products, out_path, cat)
-            
-            filename = f'katalog_{cat.replace(" ","_")}.pdf'
-            
-            with open(out_path, 'rb') as fh:
-                pdf_data = fh.read()
-            os.unlink(out_path)
-            
-            from flask import Response
-            response = Response(
-                pdf_data,
-                mimetype='application/pdf',
-                headers={
-                    'Content-Disposition': f'attachment; filename="{filename}"',
-                    'X-Filename': filename,
-                    'X-Category': cat,
-                }
-            )
-            return response
-
-        return jsonify({'error': 'ürün bulunamadı'}), 400
-
-    except Exception as e:
-        import traceback
-        print(traceback.format_exc())
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/katalog', methods=['POST'])
-def katalog():
-    try:
-        load_fonts()
-        payload = request.get_json()
-        if not payload or 'files' not in payload:
-            return jsonify({'error': 'files alani eksik'}), 400
-
-        categories = defaultdict(list)
-        for f in payload['files']:
-            try:
-                p = parse_xlsm(base64.b64decode(f['data']))
-                categories[p['category'] or 'GENEL'].append(p)
-            except Exception as e:
-                print(f"Hata: {f.get('name')} -> {e}")
-
-        results = []
-        for cat, products in categories.items():
-            with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
-                out_path = tmp.name
-            build_catalog(products, out_path, cat)
-            with open(out_path,'rb') as fh:
-                pdf_b64 = base64.b64encode(fh.read()).decode()
-            os.unlink(out_path)
-            results.append({
-                'category':      cat,
-                'filename':      f'katalog_{cat.replace(" ","_")}.pdf',
-                'pdf_base64':    pdf_b64,
-                'product_count': len(products),
-                'products':      [p['ref'] for p in products],
-            })
-        return jsonify({'catalogs': results})
-    except Exception as e:
-        import traceback
-        print(traceback.format_exc())
-        return jsonify({'error': str(e)}), 500
+    return add_product()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
