@@ -11,32 +11,27 @@ from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.utils import ImageReader
-from PIL import Image, ImageFilter, ImageEnhance
+from PIL import Image
 
 app = Flask(__name__)
 
-FONT_CANDIDATES = {
-    'Sans':     ['/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'],
-    'SansBold': ['/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'],
-    'SansObl':  ['/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf'],
-}
-fonts_loaded = False
 FONT_MAP = {}
+fonts_loaded = False
 
 def load_fonts():
     global fonts_loaded, FONT_MAP
     if fonts_loaded: return
-    for name, paths in FONT_CANDIDATES.items():
-        for path in paths:
-            if os.path.exists(path):
-                try:
-                    pdfmetrics.registerFont(TTFont(name, path))
-                    FONT_MAP[name] = path
-                    break
-                except: pass
+    for name, path in [
+        ('Sans',     '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'),
+        ('SansBold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'),
+        ('SansObl',  '/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf'),
+    ]:
+        if os.path.exists(path):
+            try: pdfmetrics.registerFont(TTFont(name, path)); FONT_MAP[name] = True
+            except: pass
     fonts_loaded = True
 
-def F():  return 'SansBold' if 'SansBold' in FONT_MAP else 'Helvetica'
+def F():  return 'Sans'     if 'Sans'     in FONT_MAP else 'Helvetica'
 def FB(): return 'SansBold' if 'SansBold' in FONT_MAP else 'Helvetica-Bold'
 def FO(): return 'SansObl'  if 'SansObl'  in FONT_MAP else 'Helvetica-Oblique'
 
@@ -84,12 +79,12 @@ def parse_xlsm(xlsm_bytes):
         d = get(f'Benefit detail {i}')
         if t and t.lower() not in ('none','') and t not in seen:
             seen.add(t); product['benefits'].append((t,d))
-    # Görselleri base64 olarak sakla
+    # Görseli hızlı çek — upscale yok
     product['images_b64'] = extract_images_b64(buf)
     return product
 
 def extract_images_b64(xlsm_buf):
-    """Görselleri base64 string olarak döndür — JSON'a serileştirilebilir"""
+    """Sadece ilk uygun görseli al, işleme yapma"""
     imgs = []
     xlsm_buf.seek(0)
     try:
@@ -98,30 +93,24 @@ def extract_images_b64(xlsm_buf):
                 data = z.read(path)
                 try:
                     im = Image.open(BytesIO(data))
-                    if min(im.size) >= 200:
-                        imgs.append(base64.b64encode(data).decode())
-                        if len(imgs) == 3: break
+                    if min(im.size) >= 150:
+                        # Sadece RGB'ye çevir, boyut değiştirme
+                        if im.mode == 'P': im = im.convert('RGBA')
+                        if im.mode == 'RGBA':
+                            bg = Image.new('RGB', im.size, (255,255,255))
+                            bg.paste(im, mask=im.split()[3]); im = bg
+                        else: im = im.convert('RGB')
+                        out = BytesIO()
+                        im.save(out, 'JPEG', quality=85)
+                        imgs.append(base64.b64encode(out.getvalue()).decode())
+                        if len(imgs) == 2: break  # max 2 görsel
                 except: pass
     except: pass
     return imgs
 
-def b64_to_imagereader(b64_str, target=900):
-    """base64 görsel → ImageReader"""
+def b64_to_reader(b64):
     try:
-        data = base64.b64decode(b64_str)
-        im = Image.open(BytesIO(data))
-        if im.mode == 'P': im = im.convert('RGBA')
-        if im.mode == 'RGBA':
-            bg = Image.new('RGB', im.size, (255,255,255))
-            bg.paste(im, mask=im.split()[3]); im = bg
-        else: im = im.convert('RGB')
-        w,h = im.size; s = max(w,h)
-        sq = Image.new('RGB',(s,s),(255,255,255))
-        sq.paste(im,((s-w)//2,(s-h)//2)); im = sq
-        if im.size[0] < target: im = im.resize((target,target), Image.LANCZOS)
-        im = im.filter(ImageFilter.UnsharpMask(radius=1.5,percent=150,threshold=2))
-        im = ImageEnhance.Contrast(im).enhance(1.05)
-        out = BytesIO(); im.save(out,'JPEG',quality=97); out.seek(0)
+        out = BytesIO(base64.b64decode(b64))
         return ImageReader(out)
     except: return None
 
@@ -130,14 +119,14 @@ def calc_card_h(product):
     return max(65*mm, min(8*mm+5*mm+4.5*mm+4*mm + n*(4.5*mm+2*4.2*mm+1.5*mm) + 10*mm, 150*mm))
 
 def draw_page_chrome(cv, page_num, category):
-    HDR = 13*mm
+    HDR=13*mm
     cv.setFillColor(DARK); cv.rect(0,H-HDR,W,HDR,fill=1,stroke=0)
     cv.setFillColor(RED);  cv.rect(0,H-HDR,3.5*mm,HDR,fill=1,stroke=0)
     cv.setFillColor(WHITE); cv.setFont(FB(),9)
     cv.drawString(8*mm,H-HDR+4.5*mm,str(category).upper())
     cv.setFont(F(),7.5); cv.setFillColor(MGRAY)
     cv.drawRightString(W-8*mm,H-HDR+4.5*mm,'Urun Katalogu 2024')
-    FTR = 10*mm
+    FTR=10*mm
     cv.setFillColor(LGRAY); cv.rect(0,0,W,FTR,fill=1,stroke=0)
     cv.setStrokeColor(MGRAY); cv.setLineWidth(0.3); cv.line(0,FTR,W,FTR)
     cv.setFillColor(DGRAY); cv.setFont(F(),6.5)
@@ -147,8 +136,8 @@ def draw_page_chrome(cv, page_num, category):
     cv.drawCentredString(W/2,3.5*mm,f'{page_num} | TEFAL')
 
 def draw_card(cv, x, y, cw, ch, product):
-    imgs = [b64_to_imagereader(b) for b in product.get('images_b64',[])]
-    imgs = [i for i in imgs if i is not None]
+    imgs = [b64_to_reader(b) for b in product.get('images_b64',[])]
+    imgs = [i for i in imgs if i]
     n_imgs = len(imgs)
 
     PAD=4*mm; GAP=5*mm
@@ -187,7 +176,8 @@ def draw_card(cv, x, y, cw, ch, product):
 
     for title,detail in product.get('benefits',[]):
         if cy-4.5*mm<BOT+PAD+4*mm: break
-        cv.setFillColor(RED); cv.setFont(FB(),9); cv.drawString(LX,cy-4.5*mm+1.5*mm,'*')
+        cv.setFillColor(RED); cv.setFont(FB(),9)
+        cv.drawString(LX,cy-4.5*mm+1.5*mm,'*')
         cv.setFillColor(DARK); cv.setFont(FB(),7.5)
         t=str(title)
         while tw(cv,t,FB(),7.5)>LW-5*mm and len(t)>5: t=t[:-2]+'.'
@@ -208,12 +198,9 @@ def draw_card(cv, x, y, cw, ch, product):
     if n_imgs==0: return
     area_h=ch-2*PAD
     if n_imgs==1: slots=[(RX,y-PAD-area_h,RW,area_h)]
-    elif n_imgs==2:
+    else:
         h1=area_h*0.62; h2=area_h-h1-3*mm
         slots=[(RX,y-PAD-h1,RW,h1),(RX,y-PAD-h1-3*mm-h2,RW,h2)]
-    else:
-        h1=area_h*0.55; hr=(area_h-h1-6*mm)/2
-        slots=[(RX,y-PAD-h1,RW,h1),(RX,y-PAD-h1-3*mm-hr,RW,hr),(RX,y-PAD-h1-6*mm-2*hr,RW,hr)]
 
     for i,(px,py,pw,ph) in enumerate(slots):
         if i>=len(imgs): break
@@ -224,8 +211,7 @@ def draw_card(cv, x, y, cw, ch, product):
         cv.setStrokeColor(MGRAY); cv.setLineWidth(0.4)
         cv.roundRect(px,py,pw,ph,2*mm,fill=0,stroke=1)
 
-def build_catalog_from_products(products, output_path, category):
-    """Ürün listesinden PDF oluştur"""
+def build_pdf(products, output_path, category):
     load_fonts()
     cv = canvas.Canvas(output_path, pagesize=A4)
     cv.setTitle(f'TEFAL {category} Katalogu 2024')
@@ -240,30 +226,21 @@ def build_catalog_from_products(products, output_path, category):
         draw_card(cv,MARGIN,current_y,CARD_W,ch,product)
         current_y-=ch+CARD_GAP
     cv.showPage(); cv.save()
-    return output_path
 
-# ── Endpoints ─────────────────────────────────────────────────
+# In-memory state: {category: {ref: product}}
+CATALOG_STATE = defaultdict(dict)
 
 @app.route('/health', methods=['GET'])
 def health():
     load_fonts()
-    return jsonify({'status': 'ok', 'fonts': list(FONT_MAP.keys())})
+    summary = {cat: len(prods) for cat, prods in CATALOG_STATE.items()}
+    return jsonify({'status': 'ok', 'fonts': list(FONT_MAP.keys()), 'state': summary})
 
 @app.route('/add_product', methods=['POST'])
+@app.route('/upload', methods=['POST'])
 def add_product():
-    """
-    n8n'den gelecek veri:
-    - file: xlsm binary
-    - state: mevcut state JSON (Drive'dan indirilmiş, opsiyonel)
-    
-    Döndürür:
-    - PDF binary (katalog_KATEGORI.pdf)
-    - Header: X-Category, X-Filename, X-State (güncel state JSON base64)
-    """
     try:
         load_fonts()
-
-        # xlsm oku
         if 'file' not in request.files:
             return jsonify({'error': 'file eksik'}), 400
 
@@ -271,37 +248,23 @@ def add_product():
         product = parse_xlsm(xlsm_bytes)
         category = product['category'] or 'GENEL'
 
-        # Mevcut state'i oku (Drive'dan gelen JSON)
-        state = {}  # {ref: product_dict}
-        if 'state' in request.files:
-            try:
-                state_bytes = request.files['state'].read()
-                state = json.loads(state_bytes.decode('utf-8'))
-            except: pass
+        # State'e ekle
+        CATALOG_STATE[category][product['ref']] = product
 
-        # Yeni ürünü state'e ekle/güncelle
-        state[product['ref']] = product
-
-        # Tüm ürünlerden PDF oluştur
-        products_list = list(state.values())
+        # O kategorinin tüm ürünlerinden PDF oluştur
+        products_list = list(CATALOG_STATE[category].values())
 
         with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
             out_path = tmp.name
 
-        build_catalog_from_products(products_list, out_path, category)
+        build_pdf(products_list, out_path, category)
 
         with open(out_path,'rb') as fh:
             pdf_data = fh.read()
         os.unlink(out_path)
 
-        # State'i base64 olarak header'da döndür
-        state_b64 = base64.b64encode(
-            json.dumps(state, ensure_ascii=False).encode('utf-8')
-        ).decode()
-
         safe_cat = category.replace(' ','_').replace('/','_').replace('&','and')
-        filename = f'katalog_{safe_cat}.pdf'
-        state_filename = f'state_{safe_cat}.json'
+        filename  = f'katalog_{safe_cat}.pdf'
 
         return Response(
             pdf_data,
@@ -309,11 +272,9 @@ def add_product():
             headers={
                 'Content-Disposition': f'attachment; filename="{filename}"',
                 'X-Filename':       filename,
-                'X-State-Filename': state_filename,
                 'X-Category':       category,
                 'X-Product-Ref':    product['ref'],
                 'X-Product-Count':  str(len(products_list)),
-                'X-State-B64':      state_b64,
             }
         )
 
@@ -321,11 +282,6 @@ def add_product():
         import traceback
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
-
-# Eski endpoint — geriye dönük uyumluluk
-@app.route('/upload', methods=['POST'])
-def upload():
-    return add_product()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
