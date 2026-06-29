@@ -125,112 +125,111 @@ def b64_to_reader(b64):
         return ImageReader(out)
     except: return None
 
-def calc_card_h(product):
-    n = len(product.get('benefits', []))
-    return max(65*mm, min(8*mm+5*mm+4.5*mm+4*mm + n*(4.5*mm+2*4.2*mm+1.5*mm) + 10*mm, 150*mm))
-
 def draw_page_chrome(cv, page_num, category):
-    HDR=13*mm
-    cv.setFillColor(DARK); cv.rect(0,H-HDR,W,HDR,fill=1,stroke=0)
-    cv.setFillColor(RED);  cv.rect(0,H-HDR,3.5*mm,HDR,fill=1,stroke=0)
-    cv.setFillColor(WHITE); cv.setFont(FB(),9)
-    cv.drawString(8*mm,H-HDR+4.5*mm,str(category).upper())
-    cv.setFont(F(),7.5); cv.setFillColor(MGRAY)
-    cv.drawRightString(W-8*mm,H-HDR+4.5*mm,'Urun Katalogu 2024')
-    FTR=10*mm
-    cv.setFillColor(LGRAY); cv.rect(0,0,W,FTR,fill=1,stroke=0)
-    cv.setStrokeColor(MGRAY); cv.setLineWidth(0.3); cv.line(0,FTR,W,FTR)
-    cv.setFillColor(DGRAY); cv.setFont(F(),6.5)
-    cv.drawString(8*mm,3.5*mm,'2024 TEFAL')
-    cv.drawRightString(W-8*mm,3.5*mm,'tefal.com.tr')
-    cv.setFillColor(DARK); cv.setFont(FB(),7)
-    cv.drawCentredString(W/2,3.5*mm,f'{page_num} | TEFAL')
+    HDR = 13*mm
+    cv.setFillColor(DARK); cv.rect(0, H-HDR, W, HDR, fill=1, stroke=0)
+    cv.setFillColor(RED);  cv.rect(0, H-HDR, 3.5*mm, HDR, fill=1, stroke=0)
+    cv.setFillColor(WHITE); cv.setFont(FB(), 9)
+    cv.drawString(8*mm, H-HDR+4.5*mm, str(category).upper())
+    cv.setFont(F(), 7.5); cv.setFillColor(MGRAY)
+    cv.drawRightString(W-8*mm, H-HDR+4.5*mm, 'Urun Katalogu 2024')
+    FTR = 10*mm
+    cv.setFillColor(LGRAY); cv.rect(0, 0, W, FTR, fill=1, stroke=0)
+    cv.setStrokeColor(MGRAY); cv.setLineWidth(0.3); cv.line(0, FTR, W, FTR)
+    cv.setFillColor(DGRAY); cv.setFont(F(), 6.5)
+    cv.drawString(8*mm, 3.5*mm, '2024 TEFAL')
+    cv.drawRightString(W-8*mm, 3.5*mm, 'tefal.com.tr')
+    cv.setFillColor(DARK); cv.setFont(FB(), 7)
+    cv.drawCentredString(W/2, 3.5*mm, f'{page_num} | TEFAL')
 
 def draw_card(cv, x, y, cw, ch, product):
-    imgs = [b64_to_reader(b) for b in product.get('images_b64',[])]
+    """3-column grid card: image on top, bold name + bullet features below."""
+    imgs = [b64_to_reader(b) for b in product.get('images_b64', [])]
     imgs = [i for i in imgs if i]
-    n_imgs = len(imgs)
 
-    PAD=4*mm; GAP=5*mm
-    LW=(cw-2*PAD-GAP)*0.48 if n_imgs>0 else cw-2*PAD
-    RW=(cw-2*PAD-GAP)*0.52 if n_imgs>0 else 0
-    LX=x+PAD; RX=x+PAD+LW+GAP; BOT=y-ch
+    IMG_H = cw * 0.88  # nearly square image area
+    PAD = 2*mm
 
-    cv.setFillColor(WHITE); cv.roundRect(x,BOT,cw,ch,2*mm,fill=1,stroke=0)
-    cv.setStrokeColor(MGRAY); cv.setLineWidth(0.5); cv.roundRect(x,BOT,cw,ch,2*mm,fill=0,stroke=1)
-    cv.setFillColor(RED); cv.roundRect(x,y-5*mm,3*mm,5*mm,1*mm,fill=1,stroke=0)
-    cv.rect(x+1.5*mm,y-5*mm,1.5*mm,5*mm,fill=1,stroke=0)
-
-    cy=y-PAD
-    cv.setFillColor(DARK); cv.setFont(FB(),9)
-    for ln in wrap(cv,product['name'],FB(),9,LW)[:2]:
-        cv.drawString(LX,cy,ln); cy-=5.5*mm
-    cy-=1*mm
-
+    # Image area — light gray background
+    img_bot = y - IMG_H
     cv.setFillColor(LGRAY)
-    bw=tw(cv,product['ref'],F(),6.5)+5*mm
-    cv.roundRect(LX,cy-5*mm,bw,5*mm,1.5*mm,fill=1,stroke=0)
-    cv.setFillColor(DGRAY); cv.setFont(F(),6.5)
-    cv.drawString(LX+2.5*mm,cy-3.5*mm,product['ref']); cy-=8*mm
+    cv.rect(x, img_bot, cw, IMG_H, fill=1, stroke=0)
+    if imgs:
+        try:
+            cv.drawImage(imgs[0], x+2*mm, img_bot+2*mm, cw-4*mm, IMG_H-4*mm,
+                         preserveAspectRatio=True, anchor='c', mask='auto')
+        except: pass
 
-    cv.setStrokeColor(RED); cv.setLineWidth(1.5); cv.line(LX,cy,LX+LW*0.45,cy)
-    cv.setStrokeColor(MGRAY); cv.setLineWidth(0.3); cv.line(LX+LW*0.45+2*mm,cy,LX+LW,cy)
-    cy-=4*mm
+    # Text area
+    ty = img_bot - PAD - 4*mm
 
-    if product.get('claim'):
-        cv.setFillColor(RED); cv.setFont(FO(),7.5)
-        claim=str(product['claim'])
-        while tw(cv,claim,FO(),7.5)>LW and len(claim)>5: claim=claim[:-4]+'...'
-        cv.drawString(LX,cy,claim); cy-=4.5*mm
-        cv.setStrokeColor(colors.HexColor('#EBEBEB')); cv.setLineWidth(0.25)
-        cv.line(LX,cy,LX+LW,cy); cy-=2.5*mm
+    # Product name — bold dark blue
+    cv.setFillColor(colors.HexColor('#1A3A5C'))
+    cv.setFont(FB(), 8)
+    for ln in wrap(cv, product.get('name', ''), FB(), 8, cw)[:2]:
+        cv.drawString(x, ty, ln)
+        ty -= 4.8*mm
 
-    for title,detail in product.get('benefits',[]):
-        if cy-4.5*mm<BOT+PAD+4*mm: break
-        cv.setFillColor(RED); cv.setFont(FB(),9)
-        cv.drawString(LX,cy-4.5*mm+1.5*mm,'*')
-        cv.setFillColor(DARK); cv.setFont(FB(),7.5)
-        t=str(title)
-        while tw(cv,t,FB(),7.5)>LW-5*mm and len(t)>5: t=t[:-2]+'.'
-        cv.drawString(LX+4.5*mm,cy-4.5*mm+1.5*mm,t); cy-=4.5*mm
-        if detail:
-            cv.setFillColor(DGRAY); cv.setFont(F(),7.0)
-            for dl in wrap(cv,str(detail),F(),7.0,LW-4.5*mm)[:2]:
-                if cy-4.2*mm<BOT+PAD+4*mm: break
-                cv.drawString(LX+4.5*mm,cy-4.2*mm+1.5*mm,dl); cy-=4.2*mm
-        cv.setStrokeColor(colors.HexColor('#F0F0F0')); cv.setLineWidth(0.2)
-        cv.line(LX,cy-1*mm,LX+LW,cy-1*mm); cy-=1.5*mm
+    # Ref code
+    ty -= 1*mm
+    cv.setFillColor(DGRAY); cv.setFont(F(), 6)
+    cv.drawString(x, ty, product.get('ref', ''))
+    ty -= 4.5*mm
 
-    cv.setFillColor(LGRAY); cv.roundRect(LX,BOT+2*mm,LW,6*mm,1*mm,fill=1,stroke=0)
-    cv.setFillColor(DGRAY); cv.setFont(F(),6)
-    cv.drawString(LX+3*mm,BOT+4.5*mm,
-        f"Kutu Icerigi: {str(product['name']).split(',')[0]} - {product['ref']}")
-
-    if n_imgs==0: return
-    area_h=ch-2*PAD
-    px,py,pw,ph = RX, y-PAD-area_h, RW, area_h
-    cv.setFillColor(LGRAY); cv.roundRect(px,py,pw,ph,2*mm,fill=1,stroke=0)
-    try: cv.drawImage(imgs[0],px+2*mm,py+2*mm,pw-4*mm,ph-4*mm,
-                      preserveAspectRatio=True,anchor='c',mask='auto')
-    except: pass
+    # Separator
     cv.setStrokeColor(MGRAY); cv.setLineWidth(0.4)
-    cv.roundRect(px,py,pw,ph,2*mm,fill=0,stroke=1)
+    cv.line(x, ty, x + cw, ty)
+    ty -= 3.5*mm
+
+    # Bullet features
+    bottom_limit = y - ch + 2*mm
+    for title, _ in product.get('benefits', [])[:6]:
+        if ty - 4*mm < bottom_limit: break
+        cv.setFillColor(RED)
+        cv.circle(x + 2*mm, ty - 1.2*mm, 1.3*mm, fill=1, stroke=0)
+        cv.setFillColor(DARK); cv.setFont(F(), 6.8)
+        text = str(title)
+        max_w = cw - 6*mm
+        while tw(cv, text, F(), 6.8) > max_w and len(text) > 5:
+            text = text[:-2] + '.'
+        cv.drawString(x + 5.5*mm, ty, text)
+        ty -= 4.5*mm
 
 def build_pdf(products, output_path, category):
     load_fonts()
     cv = canvas.Canvas(output_path, pagesize=A4)
     cv.setTitle(f'TEFAL {category} Katalogu 2024')
-    MARGIN=8*mm; HDR_H=13*mm; FTR_H=10*mm; CARD_GAP=4*mm; CARD_W=W-2*MARGIN
-    page_num=1; current_y=H-HDR_H-5*mm
-    draw_page_chrome(cv,page_num,category)
-    for product in products:
-        ch=calc_card_h(product)
-        if current_y-ch<FTR_H+4*mm:
-            cv.showPage(); page_num+=1; current_y=H-HDR_H-5*mm
-            draw_page_chrome(cv,page_num,category)
-        draw_card(cv,MARGIN,current_y,CARD_W,ch,product)
-        current_y-=ch+CARD_GAP
-    cv.showPage(); cv.save()
+
+    MARGIN  = 12*mm
+    HDR_H   = 13*mm
+    FTR_H   = 10*mm
+    COLS    = 3
+    COL_GAP = 6*mm
+    ROW_GAP = 8*mm
+
+    card_w = (W - 2*MARGIN - (COLS - 1)*COL_GAP) / COLS
+    card_h = 95*mm
+
+    usable_h = H - HDR_H - FTR_H - 2*MARGIN
+    rows_pp  = max(1, int((usable_h + ROW_GAP) / (card_h + ROW_GAP)))
+    per_page = COLS * rows_pp
+
+    page_num = 1
+    draw_page_chrome(cv, page_num, category)
+
+    for pi in range(0, len(products), per_page):
+        if pi > 0:
+            cv.showPage(); page_num += 1
+            draw_page_chrome(cv, page_num, category)
+        for i, product in enumerate(products[pi:pi + per_page]):
+            col = i % COLS
+            row = i // COLS
+            x = MARGIN + col * (card_w + COL_GAP)
+            y = H - HDR_H - MARGIN - row * (card_h + ROW_GAP)
+            draw_card(cv, x, y, card_w, card_h, product)
+
+    cv.showPage()
+    cv.save()
 
 # In-memory state: {category: {ref: product}}
 CATALOG_STATE = defaultdict(dict)
