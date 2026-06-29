@@ -143,57 +143,63 @@ def draw_page_chrome(cv, page_num, category):
     cv.drawCentredString(W/2, 3.5*mm, f'{page_num} | TEFAL')
 
 def draw_card(cv, x, y, cw, ch, product):
-    """3-column grid card: image on top, bold name + bullet features below."""
+    """3-column grid card: clean white image, bold name, wrapped bullet features."""
     imgs = [b64_to_reader(b) for b in product.get('images_b64', [])]
     imgs = [i for i in imgs if i]
 
-    IMG_H = cw * 0.88  # nearly square image area
-    PAD = 2*mm
+    IMG_H = cw * 0.88
 
-    # Image area — light gray background
+    # Image area — white, no gray box
     img_bot = y - IMG_H
-    cv.setFillColor(LGRAY)
+    cv.setFillColor(WHITE)
     cv.rect(x, img_bot, cw, IMG_H, fill=1, stroke=0)
     if imgs:
         try:
-            cv.drawImage(imgs[0], x+2*mm, img_bot+2*mm, cw-4*mm, IMG_H-4*mm,
+            cv.drawImage(imgs[0], x, img_bot, cw, IMG_H,
                          preserveAspectRatio=True, anchor='c', mask='auto')
         except: pass
 
-    # Text area
-    ty = img_bot - PAD - 4*mm
+    # Thin red accent under image
+    cv.setStrokeColor(RED); cv.setLineWidth(1.5)
+    cv.line(x, img_bot, x + cw * 0.38, img_bot)
+    cv.setStrokeColor(colors.HexColor('#E8E8E8')); cv.setLineWidth(0.4)
+    cv.line(x + cw * 0.38 + 1.5*mm, img_bot, x + cw, img_bot)
 
-    # Product name — bold dark blue
-    cv.setFillColor(colors.HexColor('#1A3A5C'))
-    cv.setFont(FB(), 8)
-    for ln in wrap(cv, product.get('name', ''), FB(), 8, cw)[:2]:
+    # Product name
+    ty = img_bot - 4.5*mm
+    cv.setFillColor(DARK); cv.setFont(FB(), 8.5)
+    for ln in wrap(cv, product.get('name', ''), FB(), 8.5, cw)[:2]:
         cv.drawString(x, ty, ln)
-        ty -= 4.8*mm
+        ty -= 5*mm
 
     # Ref code
-    ty -= 1*mm
+    ty -= 0.5*mm
     cv.setFillColor(DGRAY); cv.setFont(F(), 6)
     cv.drawString(x, ty, product.get('ref', ''))
-    ty -= 4.5*mm
+    ty -= 5*mm
 
     # Separator
-    cv.setStrokeColor(MGRAY); cv.setLineWidth(0.4)
+    cv.setStrokeColor(colors.HexColor('#DEDEDE')); cv.setLineWidth(0.3)
     cv.line(x, ty, x + cw, ty)
-    ty -= 3.5*mm
+    ty -= 4*mm
 
-    # Bullet features
+    # Bullet features — wrap properly, no truncation
+    BUL_X = x + 4.5*mm
+    BUL_W = cw - 4.5*mm
     bottom_limit = y - ch + 2*mm
+
     for title, _ in product.get('benefits', [])[:6]:
-        if ty - 4*mm < bottom_limit: break
+        lines = wrap(cv, str(title), F(), 7, BUL_W)[:2]
+        if not lines or ty - 4*mm < bottom_limit: break
+        # Bullet on first line
         cv.setFillColor(RED)
-        cv.circle(x + 2*mm, ty - 1.2*mm, 1.3*mm, fill=1, stroke=0)
-        cv.setFillColor(DARK); cv.setFont(F(), 6.8)
-        text = str(title)
-        max_w = cw - 6*mm
-        while tw(cv, text, F(), 6.8) > max_w and len(text) > 5:
-            text = text[:-2] + '.'
-        cv.drawString(x + 5.5*mm, ty, text)
-        ty -= 4.5*mm
+        cv.circle(x + 1.8*mm, ty - 1.4*mm, 1.2*mm, fill=1, stroke=0)
+        cv.setFillColor(DARK); cv.setFont(F(), 7)
+        for i, ln in enumerate(lines):
+            if ty - 3.5*mm < bottom_limit: break
+            cv.drawString(BUL_X, ty, ln)
+            ty -= 4*mm
+        ty -= 0.8*mm
 
 def build_pdf(products, output_path, category):
     load_fonts()
