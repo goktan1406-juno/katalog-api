@@ -292,21 +292,20 @@ def add_product():
         safe_cat = category.replace(' ','_').replace('/','_').replace('&','and')
         filename       = f'katalog_{safe_cat}.pdf'
         state_filename = f'state_{safe_cat}.json'
-        state_json     = json.dumps(state, ensure_ascii=False)
+        state_json = json.dumps(state, ensure_ascii=False)
 
-        return Response(
-            pdf_data,
-            mimetype='application/pdf',
-            headers={
-                'Content-Disposition':  f'attachment; filename="{filename}"',
-                'X-Filename':           filename,
-                'X-State-Filename':     state_filename,
-                'X-Category':           category,
-                'X-Product-Ref':        product['ref'],
-                'X-Product-Count':      str(len(products_list)),
-                'X-State':              base64.b64encode(state_json.encode()).decode(),
-            }
-        )
+        # State + PDF'i JSON içinde döndür
+        # pdf_base64 + state_json birlikte
+        result = {
+            'pdf_base64':    base64.b64encode(pdf_data).decode(),
+            'state_json':    state_json,
+            'filename':      filename,
+            'state_filename': state_filename,
+            'category':      category,
+            'product_ref':   product['ref'],
+            'product_count': len(products_list),
+        }
+        return jsonify(result)
 
     except Exception as e:
         import traceback
