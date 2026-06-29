@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify
 import base64, zipfile, os, tempfile, json
 from io import BytesIO
 from collections import defaultdict
@@ -18,29 +18,16 @@ app = Flask(__name__)
 FONT_MAP = {}
 fonts_loaded = False
 
-# Vera fontları ReportLab ile birlikte gelir — her ortamda çalışır
-import reportlab
-REPORTLAB_FONTS = os.path.join(os.path.dirname(reportlab.__file__), 'fonts')
-
-FONT_CANDIDATES = [
-    # Vera (ReportLab built-in) — Türkçe karakter desteği var
-    ('Sans',     os.path.join(REPORTLAB_FONTS, 'Vera.ttf')),
-    ('SansBold', os.path.join(REPORTLAB_FONTS, 'VeraBd.ttf')),
-    ('SansObl',  os.path.join(REPORTLAB_FONTS, 'VeraIt.ttf')),
-    # DejaVu fallback
-    ('Sans',     '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'),
-    ('SansBold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'),
-    ('SansObl',  '/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf'),
-]
-
 def load_fonts():
     global fonts_loaded, FONT_MAP
     if fonts_loaded: return
-    for name, path in FONT_CANDIDATES:
-        if name not in FONT_MAP and os.path.exists(path):
-            try:
-                pdfmetrics.registerFont(TTFont(name, path))
-                FONT_MAP[name] = path
+    for name, path in [
+        ('Sans',     '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'),
+        ('SansBold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'),
+        ('SansObl',  '/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf'),
+    ]:
+        if os.path.exists(path):
+            try: pdfmetrics.registerFont(TTFont(name, path)); FONT_MAP[name] = True
             except: pass
     fonts_loaded = True
 
@@ -97,7 +84,8 @@ def parse_xlsm(xlsm_bytes):
     return product
 
 def extract_images_b64(xlsm_buf):
-    """Sadece ilk kaliteli görseli al — ana packshot"""
+    """Sadece ilk uygun görseli al, işleme yapma"""
+    imgs = []
     xlsm_buf.seek(0)
     try:
         with zipfile.ZipFile(xlsm_buf,'r') as z:
@@ -106,20 +94,19 @@ def extract_images_b64(xlsm_buf):
                 try:
                     im = Image.open(BytesIO(data))
                     if min(im.size) >= 150:
+                        # Sadece RGB'ye çevir, boyut değiştirme
                         if im.mode == 'P': im = im.convert('RGBA')
                         if im.mode == 'RGBA':
                             bg = Image.new('RGB', im.size, (255,255,255))
                             bg.paste(im, mask=im.split()[3]); im = bg
                         else: im = im.convert('RGB')
-                        w,h = im.size; s = max(w,h)
-                        sq = Image.new('RGB',(s,s),(255,255,255))
-                        sq.paste(im,((s-w)//2,(s-h)//2))
                         out = BytesIO()
-                        sq.save(out, 'JPEG', quality=88)
-                        return [base64.b64encode(out.getvalue()).decode()]
+                        im.save(out, 'JPEG', quality=85)
+                        imgs.append(base64.b64encode(out.getvalue()).decode())
+                        if len(imgs) == 2: break  # max 2 görsel
                 except: pass
     except: pass
-    return []
+    return imgs
 
 def b64_to_reader(b64):
     try:
@@ -128,11 +115,8 @@ def b64_to_reader(b64):
     except: return None
 
 def calc_card_h(product):
-    """Kart yüksekliği — 2-3 ürün sayfaya sığsın diye max 120mm"""
     n = len(product.get('benefits', []))
-    # Her benefit: başlık(4.5mm) + detay(4.2mm) + gap(1.5mm) = 10.2mm
-    h = 8*mm + 5*mm + 4.5*mm + 4*mm + n*10.2*mm + 10*mm
-    return max(55*mm, min(h, 120*mm))
+    return max(65*mm, min(8*mm+5*mm+4.5*mm+4*mm + n*(4.5*mm+2*4.2*mm+1.5*mm) + 10*mm, 150*mm))
 
 def draw_page_chrome(cv, page_num, category):
     HDR=13*mm
@@ -212,15 +196,20 @@ def draw_card(cv, x, y, cw, ch, product):
         f"Kutu Icerigi: {str(product['name']).split(',')[0]} - {product['ref']}")
 
     if n_imgs==0: return
-    # Sadece ana fotoğraf — tam sağ sütun boyunca
-    area_h = ch - 2*PAD
-    px, py, pw, ph = RX, y-PAD-area_h, RW, area_h
-    cv.setFillColor(LGRAY); cv.roundRect(px,py,pw,ph,2*mm,fill=1,stroke=0)
-    try: cv.drawImage(imgs[0],px+2*mm,py+2*mm,pw-4*mm,ph-4*mm,
-                      preserveAspectRatio=True,anchor='c',mask='auto')
-    except: pass
-    cv.setStrokeColor(MGRAY); cv.setLineWidth(0.4)
-    cv.roundRect(px,py,pw,ph,2*mm,fill=0,stroke=1)
+    area_h=ch-2*PAD
+    if n_imgs==1: slots=[(RX,y-PAD-area_h,RW,area_h)]
+    else:
+        h1=area_h*0.62; h2=area_h-h1-3*mm
+        slots=[(RX,y-PAD-h1,RW,h1),(RX,y-PAD-h1-3*mm-h2,RW,h2)]
+
+    for i,(px,py,pw,ph) in enumerate(slots):
+        if i>=len(imgs): break
+        cv.setFillColor(LGRAY); cv.roundRect(px,py,pw,ph,2*mm,fill=1,stroke=0)
+        try: cv.drawImage(imgs[i],px+1.5*mm,py+1.5*mm,pw-3*mm,ph-3*mm,
+                          preserveAspectRatio=True,anchor='c',mask='auto')
+        except: pass
+        cv.setStrokeColor(MGRAY); cv.setLineWidth(0.4)
+        cv.roundRect(px,py,pw,ph,2*mm,fill=0,stroke=1)
 
 def build_pdf(products, output_path, category):
     load_fonts()
@@ -238,47 +227,41 @@ def build_pdf(products, output_path, category):
         current_y-=ch+CARD_GAP
     cv.showPage(); cv.save()
 
+# In-memory state: {category: {ref: product}}
+CATALOG_STATE = defaultdict(dict)
+
 @app.route('/health', methods=['GET'])
 def health():
     load_fonts()
-    return jsonify({'status': 'ok', 'fonts': list(FONT_MAP.keys())})
+    summary = {cat: len(prods) for cat, prods in CATALOG_STATE.items()}
+    return jsonify({'status': 'ok', 'fonts': list(FONT_MAP.keys()), 'state': summary})
 
 @app.route('/add_product', methods=['POST'])
 @app.route('/upload', methods=['POST'])
 def add_product():
-    """
-    Form fields:
-    - file: xlsm binary (zorunlu)
-    - state: mevcut state JSON string (opsiyonel, Drive'dan gelir)
-    
-    Response:
-    - PDF binary
-    - Header X-State: güncel state JSON (Drive'a yazılacak)
-    - Header X-Filename: pdf dosya adı
-    - Header X-State-Filename: state dosya adı
-    """
     try:
         load_fonts()
         if 'file' not in request.files:
             return jsonify({'error': 'file eksik'}), 400
 
-        # xlsm parse et
+        # Pre-populate state from previous call so server restarts don't break accumulation
+        if 'prev_state_json' in request.form:
+            try:
+                incoming = json.loads(request.form['prev_state_json'])
+                for cat, prods in incoming.items():
+                    for ref, prod in prods.items():
+                        if ref not in CATALOG_STATE[cat]:
+                            CATALOG_STATE[cat][ref] = prod
+            except Exception:
+                pass
+
         xlsm_bytes = request.files['file'].read()
         product = parse_xlsm(xlsm_bytes)
         category = product['category'] or 'GENEL'
 
-        # Mevcut state'i oku (Drive'dan gelen)
-        state = {}
-        if 'state' in request.form and request.form['state']:
-            try:
-                state = json.loads(request.form['state'])
-            except: pass
+        CATALOG_STATE[category][product['ref']] = product
 
-        # Yeni ürünü ekle
-        state[product['ref']] = product
-
-        # Tüm ürünlerden PDF oluştur
-        products_list = list(state.values())
+        products_list = list(CATALOG_STATE[category].values())
 
         with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
             out_path = tmp.name
@@ -290,22 +273,22 @@ def add_product():
         os.unlink(out_path)
 
         safe_cat = category.replace(' ','_').replace('/','_').replace('&','and')
-        filename       = f'katalog_{safe_cat}.pdf'
-        state_filename = f'state_{safe_cat}.json'
-        state_json = json.dumps(state, ensure_ascii=False)
+        filename  = f'katalog_{safe_cat}.pdf'
 
-        # State + PDF'i JSON içinde döndür
-        # pdf_base64 + state_json birlikte
-        result = {
+        # Include images_b64 so watcher can pass full state back on next call
+        state_snapshot = {
+            cat: dict(prods)
+            for cat, prods in CATALOG_STATE.items()
+        }
+
+        return jsonify({
             'pdf_base64':    base64.b64encode(pdf_data).decode(),
-            'state_json':    state_json,
             'filename':      filename,
-            'state_filename': state_filename,
             'category':      category,
             'product_ref':   product['ref'],
             'product_count': len(products_list),
-        }
-        return jsonify(result)
+            'state_json':    state_snapshot,
+        })
 
     except Exception as e:
         import traceback
