@@ -1,0 +1,8 @@
+[build]
+builder = "nixpacks"
+
+[build.nixpacksPlan.phases.setup]
+nixPkgs = ["python312", "dejavu_fonts"]
+
+[deploy]
+startCommand = "gunicorn app:app --timeout 120"
