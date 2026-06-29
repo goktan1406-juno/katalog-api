@@ -285,3 +285,20 @@ def add_product():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
+
+
+@app.route('/find_fonts', methods=['GET'])
+def find_fonts():
+    import subprocess, glob
+    # Farklı yerlerde ara
+    results = []
+    for pattern in [
+        '/usr/share/fonts/**/*.ttf',
+        '/nix/store/**/dejavu*/*.ttf',
+        '/nix/store/**/*.ttf',
+        '/home/**/*.ttf',
+        '/opt/**/*.ttf',
+    ]:
+        found = glob.glob(pattern, recursive=True)
+        results.extend(found[:5])
+    return jsonify({'found': results[:30]})
