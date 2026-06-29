@@ -12,22 +12,33 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.utils import ImageReader
 from PIL import Image
+import reportlab
 
 app = Flask(__name__)
 
 FONT_MAP = {}
 fonts_loaded = False
 
+_REPORTLAB_FONTS = os.path.join(os.path.dirname(reportlab.__file__), 'fonts')
+_FONT_CANDIDATES = [
+    # Vera — ReportLab built-in, Türkçe karakter desteği var, her ortamda çalışır
+    ('Sans',     os.path.join(_REPORTLAB_FONTS, 'Vera.ttf')),
+    ('SansBold', os.path.join(_REPORTLAB_FONTS, 'VeraBd.ttf')),
+    ('SansObl',  os.path.join(_REPORTLAB_FONTS, 'VeraIt.ttf')),
+    # DejaVu fallback
+    ('Sans',     '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'),
+    ('SansBold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'),
+    ('SansObl',  '/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf'),
+]
+
 def load_fonts():
     global fonts_loaded, FONT_MAP
     if fonts_loaded: return
-    for name, path in [
-        ('Sans',     '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'),
-        ('SansBold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'),
-        ('SansObl',  '/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf'),
-    ]:
-        if os.path.exists(path):
-            try: pdfmetrics.registerFont(TTFont(name, path)); FONT_MAP[name] = True
+    for name, path in _FONT_CANDIDATES:
+        if name not in FONT_MAP and os.path.exists(path):
+            try:
+                pdfmetrics.registerFont(TTFont(name, path))
+                FONT_MAP[name] = path
             except: pass
     fonts_loaded = True
 
@@ -103,7 +114,7 @@ def extract_images_b64(xlsm_buf):
                         out = BytesIO()
                         im.save(out, 'JPEG', quality=85)
                         imgs.append(base64.b64encode(out.getvalue()).decode())
-                        if len(imgs) == 2: break  # max 2 görsel
+                        break  # sadece ilk görsel
                 except: pass
     except: pass
     return imgs
@@ -197,19 +208,13 @@ def draw_card(cv, x, y, cw, ch, product):
 
     if n_imgs==0: return
     area_h=ch-2*PAD
-    if n_imgs==1: slots=[(RX,y-PAD-area_h,RW,area_h)]
-    else:
-        h1=area_h*0.62; h2=area_h-h1-3*mm
-        slots=[(RX,y-PAD-h1,RW,h1),(RX,y-PAD-h1-3*mm-h2,RW,h2)]
-
-    for i,(px,py,pw,ph) in enumerate(slots):
-        if i>=len(imgs): break
-        cv.setFillColor(LGRAY); cv.roundRect(px,py,pw,ph,2*mm,fill=1,stroke=0)
-        try: cv.drawImage(imgs[i],px+1.5*mm,py+1.5*mm,pw-3*mm,ph-3*mm,
-                          preserveAspectRatio=True,anchor='c',mask='auto')
-        except: pass
-        cv.setStrokeColor(MGRAY); cv.setLineWidth(0.4)
-        cv.roundRect(px,py,pw,ph,2*mm,fill=0,stroke=1)
+    px,py,pw,ph = RX, y-PAD-area_h, RW, area_h
+    cv.setFillColor(LGRAY); cv.roundRect(px,py,pw,ph,2*mm,fill=1,stroke=0)
+    try: cv.drawImage(imgs[0],px+2*mm,py+2*mm,pw-4*mm,ph-4*mm,
+                      preserveAspectRatio=True,anchor='c',mask='auto')
+    except: pass
+    cv.setStrokeColor(MGRAY); cv.setLineWidth(0.4)
+    cv.roundRect(px,py,pw,ph,2*mm,fill=0,stroke=1)
 
 def build_pdf(products, output_path, category):
     load_fonts()
