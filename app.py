@@ -97,8 +97,7 @@ def parse_xlsm(xlsm_bytes):
     return product
 
 def extract_images_b64(xlsm_buf):
-    """Sadece ilk uygun görseli al, işleme yapma"""
-    imgs = []
+    """Sadece ilk kaliteli görseli al — ana packshot"""
     xlsm_buf.seek(0)
     try:
         with zipfile.ZipFile(xlsm_buf,'r') as z:
@@ -107,19 +106,20 @@ def extract_images_b64(xlsm_buf):
                 try:
                     im = Image.open(BytesIO(data))
                     if min(im.size) >= 150:
-                        # Sadece RGB'ye çevir, boyut değiştirme
                         if im.mode == 'P': im = im.convert('RGBA')
                         if im.mode == 'RGBA':
                             bg = Image.new('RGB', im.size, (255,255,255))
                             bg.paste(im, mask=im.split()[3]); im = bg
                         else: im = im.convert('RGB')
+                        w,h = im.size; s = max(w,h)
+                        sq = Image.new('RGB',(s,s),(255,255,255))
+                        sq.paste(im,((s-w)//2,(s-h)//2))
                         out = BytesIO()
-                        im.save(out, 'JPEG', quality=85)
-                        imgs.append(base64.b64encode(out.getvalue()).decode())
-                        if len(imgs) == 2: break  # max 2 görsel
+                        sq.save(out, 'JPEG', quality=88)
+                        return [base64.b64encode(out.getvalue()).decode()]
                 except: pass
     except: pass
-    return imgs
+    return []
 
 def b64_to_reader(b64):
     try:
@@ -128,8 +128,11 @@ def b64_to_reader(b64):
     except: return None
 
 def calc_card_h(product):
+    """Kart yüksekliği — 2-3 ürün sayfaya sığsın diye max 120mm"""
     n = len(product.get('benefits', []))
-    return max(65*mm, min(8*mm+5*mm+4.5*mm+4*mm + n*(4.5*mm+2*4.2*mm+1.5*mm) + 10*mm, 150*mm))
+    # Her benefit: başlık(4.5mm) + detay(4.2mm) + gap(1.5mm) = 10.2mm
+    h = 8*mm + 5*mm + 4.5*mm + 4*mm + n*10.2*mm + 10*mm
+    return max(55*mm, min(h, 120*mm))
 
 def draw_page_chrome(cv, page_num, category):
     HDR=13*mm
@@ -209,20 +212,15 @@ def draw_card(cv, x, y, cw, ch, product):
         f"Kutu Icerigi: {str(product['name']).split(',')[0]} - {product['ref']}")
 
     if n_imgs==0: return
-    area_h=ch-2*PAD
-    if n_imgs==1: slots=[(RX,y-PAD-area_h,RW,area_h)]
-    else:
-        h1=area_h*0.62; h2=area_h-h1-3*mm
-        slots=[(RX,y-PAD-h1,RW,h1),(RX,y-PAD-h1-3*mm-h2,RW,h2)]
-
-    for i,(px,py,pw,ph) in enumerate(slots):
-        if i>=len(imgs): break
-        cv.setFillColor(LGRAY); cv.roundRect(px,py,pw,ph,2*mm,fill=1,stroke=0)
-        try: cv.drawImage(imgs[i],px+1.5*mm,py+1.5*mm,pw-3*mm,ph-3*mm,
-                          preserveAspectRatio=True,anchor='c',mask='auto')
-        except: pass
-        cv.setStrokeColor(MGRAY); cv.setLineWidth(0.4)
-        cv.roundRect(px,py,pw,ph,2*mm,fill=0,stroke=1)
+    # Sadece ana fotoğraf — tam sağ sütun boyunca
+    area_h = ch - 2*PAD
+    px, py, pw, ph = RX, y-PAD-area_h, RW, area_h
+    cv.setFillColor(LGRAY); cv.roundRect(px,py,pw,ph,2*mm,fill=1,stroke=0)
+    try: cv.drawImage(imgs[0],px+2*mm,py+2*mm,pw-4*mm,ph-4*mm,
+                      preserveAspectRatio=True,anchor='c',mask='auto')
+    except: pass
+    cv.setStrokeColor(MGRAY); cv.setLineWidth(0.4)
+    cv.roundRect(px,py,pw,ph,2*mm,fill=0,stroke=1)
 
 def build_pdf(products, output_path, category):
     load_fonts()
