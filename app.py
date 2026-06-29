@@ -147,7 +147,7 @@ def draw_card(cv, x, y, cw, ch, product):
     imgs = [b64_to_reader(b) for b in product.get('images_b64', [])]
     imgs = [i for i in imgs if i]
 
-    IMG_H = cw * 0.88
+    IMG_H = cw * 0.76
 
     # Image area — white, no gray box
     img_bot = y - IMG_H
@@ -165,41 +165,42 @@ def draw_card(cv, x, y, cw, ch, product):
     cv.setStrokeColor(colors.HexColor('#E8E8E8')); cv.setLineWidth(0.4)
     cv.line(x + cw * 0.38 + 1.5*mm, img_bot, x + cw, img_bot)
 
-    # Product name
-    ty = img_bot - 4.5*mm
-    cv.setFillColor(DARK); cv.setFont(FB(), 8.5)
-    for ln in wrap(cv, product.get('name', ''), FB(), 8.5, cw)[:2]:
+    # Product name — strip trailing punctuation if truncated at 2 lines
+    ty = img_bot - 4*mm
+    cv.setFillColor(DARK); cv.setFont(FB(), 8)
+    name_lines = wrap(cv, product.get('name', ''), FB(), 8, cw)
+    for i, ln in enumerate(name_lines[:2]):
+        if i == 1 and len(name_lines) > 2:
+            ln = ln.rstrip('.,;: ')
         cv.drawString(x, ty, ln)
-        ty -= 5*mm
+        ty -= 4.8*mm
 
     # Ref code
     ty -= 0.5*mm
     cv.setFillColor(DGRAY); cv.setFont(F(), 6)
     cv.drawString(x, ty, product.get('ref', ''))
-    ty -= 5*mm
+    ty -= 4.5*mm
 
     # Separator
     cv.setStrokeColor(colors.HexColor('#DEDEDE')); cv.setLineWidth(0.3)
     cv.line(x, ty, x + cw, ty)
-    ty -= 4*mm
+    ty -= 3.5*mm
 
-    # Bullet features — wrap properly, no truncation
-    BUL_X = x + 4.5*mm
+    # Bullet features — single line, tight spacing
+    BUL_X = x + 4*mm
     BUL_W = cw - 4.5*mm
-    bottom_limit = y - ch + 2*mm
+    bottom_limit = y - ch + 3*mm
 
     for title, _ in product.get('benefits', [])[:6]:
-        lines = wrap(cv, str(title), F(), 7, BUL_W)[:2]
-        if not lines or ty - 4*mm < bottom_limit: break
-        # Bullet on first line
+        if ty - 3.8*mm < bottom_limit: break
+        text = str(title)
+        while tw(cv, text, F(), 6.5) > BUL_W and len(text) > 5:
+            text = text[:-2] + '.'
         cv.setFillColor(RED)
-        cv.circle(x + 1.8*mm, ty - 1.4*mm, 1.2*mm, fill=1, stroke=0)
-        cv.setFillColor(DARK); cv.setFont(F(), 7)
-        for i, ln in enumerate(lines):
-            if ty - 3.5*mm < bottom_limit: break
-            cv.drawString(BUL_X, ty, ln)
-            ty -= 4*mm
-        ty -= 0.8*mm
+        cv.circle(x + 1.8*mm, ty - 1.3*mm, 1.1*mm, fill=1, stroke=0)
+        cv.setFillColor(DARK); cv.setFont(F(), 6.5)
+        cv.drawString(BUL_X, ty, text)
+        ty -= 3.8*mm
 
 def build_pdf(products, output_path, category):
     load_fonts()
