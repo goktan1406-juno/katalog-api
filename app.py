@@ -238,32 +238,47 @@ def build_pdf(products, output_path, category):
         current_y-=ch+CARD_GAP
     cv.showPage(); cv.save()
 
-# In-memory state: {category: {ref: product}}
-CATALOG_STATE = defaultdict(dict)
-
 @app.route('/health', methods=['GET'])
 def health():
     load_fonts()
-    summary = {cat: len(prods) for cat, prods in CATALOG_STATE.items()}
-    return jsonify({'status': 'ok', 'fonts': list(FONT_MAP.keys()), 'state': summary})
+    return jsonify({'status': 'ok', 'fonts': list(FONT_MAP.keys())})
 
 @app.route('/add_product', methods=['POST'])
 @app.route('/upload', methods=['POST'])
 def add_product():
+    """
+    Form fields:
+    - file: xlsm binary (zorunlu)
+    - state: mevcut state JSON string (opsiyonel, Drive'dan gelir)
+    
+    Response:
+    - PDF binary
+    - Header X-State: güncel state JSON (Drive'a yazılacak)
+    - Header X-Filename: pdf dosya adı
+    - Header X-State-Filename: state dosya adı
+    """
     try:
         load_fonts()
         if 'file' not in request.files:
             return jsonify({'error': 'file eksik'}), 400
 
+        # xlsm parse et
         xlsm_bytes = request.files['file'].read()
         product = parse_xlsm(xlsm_bytes)
         category = product['category'] or 'GENEL'
 
-        # State'e ekle
-        CATALOG_STATE[category][product['ref']] = product
+        # Mevcut state'i oku (Drive'dan gelen)
+        state = {}
+        if 'state' in request.form and request.form['state']:
+            try:
+                state = json.loads(request.form['state'])
+            except: pass
 
-        # O kategorinin tüm ürünlerinden PDF oluştur
-        products_list = list(CATALOG_STATE[category].values())
+        # Yeni ürünü ekle
+        state[product['ref']] = product
+
+        # Tüm ürünlerden PDF oluştur
+        products_list = list(state.values())
 
         with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
             out_path = tmp.name
@@ -275,17 +290,21 @@ def add_product():
         os.unlink(out_path)
 
         safe_cat = category.replace(' ','_').replace('/','_').replace('&','and')
-        filename  = f'katalog_{safe_cat}.pdf'
+        filename       = f'katalog_{safe_cat}.pdf'
+        state_filename = f'state_{safe_cat}.json'
+        state_json     = json.dumps(state, ensure_ascii=False)
 
         return Response(
             pdf_data,
             mimetype='application/pdf',
             headers={
-                'Content-Disposition': f'attachment; filename="{filename}"',
-                'X-Filename':       filename,
-                'X-Category':       category,
-                'X-Product-Ref':    product['ref'],
-                'X-Product-Count':  str(len(products_list)),
+                'Content-Disposition':  f'attachment; filename="{filename}"',
+                'X-Filename':           filename,
+                'X-State-Filename':     state_filename,
+                'X-Category':           category,
+                'X-Product-Ref':        product['ref'],
+                'X-Product-Count':      str(len(products_list)),
+                'X-State':              base64.b64encode(state_json.encode()).decode(),
             }
         )
 
