@@ -18,16 +18,29 @@ app = Flask(__name__)
 FONT_MAP = {}
 fonts_loaded = False
 
+# Vera fontları ReportLab ile birlikte gelir — her ortamda çalışır
+import reportlab
+REPORTLAB_FONTS = os.path.join(os.path.dirname(reportlab.__file__), 'fonts')
+
+FONT_CANDIDATES = [
+    # Vera (ReportLab built-in) — Türkçe karakter desteği var
+    ('Sans',     os.path.join(REPORTLAB_FONTS, 'Vera.ttf')),
+    ('SansBold', os.path.join(REPORTLAB_FONTS, 'VeraBd.ttf')),
+    ('SansObl',  os.path.join(REPORTLAB_FONTS, 'VeraIt.ttf')),
+    # DejaVu fallback
+    ('Sans',     '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'),
+    ('SansBold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'),
+    ('SansObl',  '/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf'),
+]
+
 def load_fonts():
     global fonts_loaded, FONT_MAP
     if fonts_loaded: return
-    for name, path in [
-        ('Sans',     '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'),
-        ('SansBold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'),
-        ('SansObl',  '/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf'),
-    ]:
-        if os.path.exists(path):
-            try: pdfmetrics.registerFont(TTFont(name, path)); FONT_MAP[name] = True
+    for name, path in FONT_CANDIDATES:
+        if name not in FONT_MAP and os.path.exists(path):
+            try:
+                pdfmetrics.registerFont(TTFont(name, path))
+                FONT_MAP[name] = path
             except: pass
     fonts_loaded = True
 
