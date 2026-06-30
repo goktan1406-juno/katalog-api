@@ -73,12 +73,14 @@ def parse_xlsm(xlsm_bytes):
             if row[0] and str(row[0]).strip() == label:
                 return str(row[1]).strip() if row[1] else ''
         return ''
+    name = get('Commercial Name')
     product = {
         'ref':      get('Product Reference'),
         'brand':    get('Brand'),
-        'name':     get('Commercial Name'),
+        'name':     name,
         'claim':    get('Key claim'),
         'category': get('PL') or get('Family L1') or 'GENEL',
+        'series':   get('Family L2') or get('Range name') or get('Range') or get('Series') or ' '.join(name.split()[:2]),
         'benefits': [],
     }
     seen = set()
@@ -218,12 +220,15 @@ def draw_card(cv, x, y, cw, ch, product):
         while tw(cv, text, F(), 6.5) > BUL_W and len(text) > 5:
             text = text[:-2] + '.'
         cv.setFillColor(RED)
-        cv.circle(x + 1.8*mm, ty - 1.3*mm, 1.1*mm, fill=1, stroke=0)
+        cv.circle(x + 1.8*mm, ty + 0.7*mm, 1.1*mm, fill=1, stroke=0)
         cv.setFillColor(DARK); cv.setFont(F(), 6.5)
         cv.drawString(BUL_X, ty, text)
         ty -= 3.5*mm
 
 def build_pdf(products, output_path, category, lifestyle_image=None):
+    # Group same-series products together so they appear side by side
+    products = sorted(products, key=lambda p: (p.get('series', ''), p.get('name', '')))
+
     load_fonts()
     cv = canvas.Canvas(output_path, pagesize=A4)
     cv.setTitle(f'TEFAL {category} Katalogu 2024')
