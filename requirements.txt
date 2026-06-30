@@ -3,3 +3,4 @@ reportlab
 openpyxl
 pillow
 gunicorn
+anthropic
