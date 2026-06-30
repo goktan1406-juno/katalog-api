@@ -127,12 +127,12 @@ def draw_page_chrome(cv, page_num, category):
     cv.setFillColor(WHITE); cv.setFont(FB(), 9)
     cv.drawString(8*mm, H-HDR+4.5*mm, str(category).upper())
     cv.setFont(F(), 7.5); cv.setFillColor(MGRAY)
-    cv.drawRightString(W-8*mm, H-HDR+4.5*mm, 'Urun Katalogu 2024')
+    cv.drawRightString(W-8*mm, H-HDR+4.5*mm, 'Urun Katalogu 2026')
     FTR = 10*mm
     cv.setFillColor(LGRAY); cv.rect(0, 0, W, FTR, fill=1, stroke=0)
     cv.setStrokeColor(MGRAY); cv.setLineWidth(0.3); cv.line(0, FTR, W, FTR)
     cv.setFillColor(DGRAY); cv.setFont(F(), 6.5)
-    cv.drawString(8*mm, 3.5*mm, '2024 TEFAL')
+    cv.drawString(8*mm, 3.5*mm, '2026 TEFAL')
     cv.drawRightString(W-8*mm, 3.5*mm, 'tefal.com.tr')
     cv.setFillColor(DARK); cv.setFont(FB(), 7)
     cv.drawCentredString(W/2, 3.5*mm, f'{page_num} | TEFAL')
@@ -231,7 +231,7 @@ def build_pdf(products, output_path, category, lifestyle_image=None):
 
     load_fonts()
     cv = canvas.Canvas(output_path, pagesize=A4)
-    cv.setTitle(f'TEFAL {category} Katalogu 2024')
+    cv.setTitle(f'TEFAL {category} Katalogu 2026')
 
     MARGIN   = 12*mm
     HDR_H    = 13*mm
@@ -239,50 +239,43 @@ def build_pdf(products, output_path, category, lifestyle_image=None):
     COLS     = 3
     COL_GAP  = 6*mm
     ROW_GAP  = 8*mm
-    BANNER_H = 52*mm
+    BANNER_H = 40*mm  # lifestyle banner on every page
 
     card_w = (W - 2*MARGIN - (COLS - 1)*COL_GAP) / COLS
     card_h = 95*mm
 
     usable_h = H - HDR_H - FTR_H - 2*MARGIN
+    if lifestyle_image:
+        usable_h -= (BANNER_H + ROW_GAP)
     rows_pp  = max(1, int((usable_h + ROW_GAP) / (card_h + ROW_GAP)))
     per_page = COLS * rows_pp
 
-    # Page 1 has fewer product rows when lifestyle banner is present
-    if lifestyle_image:
-        usable_h_p1 = usable_h - BANNER_H - ROW_GAP
-        rows_pp1    = max(1, int((usable_h_p1 + ROW_GAP) / (card_h + ROW_GAP)))
-        per_page_1  = COLS * rows_pp1
-    else:
-        per_page_1 = per_page
-
-    page_num = 1
-    draw_page_chrome(cv, page_num, category)
-
-    # Lifestyle banner on page 1
     banner_top = H - HDR_H - MARGIN
     if lifestyle_image:
-        draw_lifestyle_banner(cv, MARGIN, banner_top, W - 2*MARGIN, BANNER_H, lifestyle_image, category)
         product_start_y = banner_top - BANNER_H - ROW_GAP
     else:
         product_start_y = banner_top
 
+    def init_page(pnum):
+        draw_page_chrome(cv, pnum, category)
+        if lifestyle_image:
+            draw_lifestyle_banner(cv, MARGIN, banner_top,
+                                  W - 2*MARGIN, BANNER_H, lifestyle_image, category)
+
+    page_num = 1
+    init_page(page_num)
     page_i = 0
-    current_start_y   = product_start_y
-    current_per_page  = per_page_1
 
     for product in products:
-        if page_i >= current_per_page:
+        if page_i >= per_page:
             cv.showPage(); page_num += 1
-            draw_page_chrome(cv, page_num, category)
+            init_page(page_num)
             page_i = 0
-            current_start_y  = banner_top
-            current_per_page = per_page
 
         col = page_i % COLS
         row = page_i // COLS
         x = MARGIN + col * (card_w + COL_GAP)
-        y = current_start_y - row * (card_h + ROW_GAP)
+        y = product_start_y - row * (card_h + ROW_GAP)
         draw_card(cv, x, y, card_w, card_h, product)
         page_i += 1
 
@@ -296,6 +289,10 @@ CATALOG_STATE = defaultdict(dict)
 
 def match_with_claude(img_b64, media_type, categories):
     """Use Claude Haiku Vision to pick the best-matching category for a lifestyle image."""
+    if not categories:
+        return 'GENEL'
+    if len(categories) == 1:
+        return list(categories)[0]
     try:
         import anthropic
         client = anthropic.Anthropic()
