@@ -86,6 +86,29 @@ def parse_xlsm(xlsm_bytes):
                     return str(int(v))
                 return str(v).strip() if v else ''
         return ''
+    def get_technical_characteristics():
+        section_headers = {
+            'RANGE TABLE', 'PRODUCT INFORMATION', 'MARKETING INFORMATION', 'MEDIA IDs',
+            'TECHNICAL CHARACTERISTICS', 'ENVIRONMENTAL CHARACTERISTICS',
+            'WEIGHT AND DIMENSIONS (UNPACKED)', 'REPAIRABILITY', 'LOGISTICS DATA', 'RELATIONS',
+        }
+        pairs, in_section = {}, False
+        for row in rt.iter_rows(values_only=True):
+            if not row[0]:
+                continue
+            k = str(row[0]).strip()
+            if k == 'TECHNICAL CHARACTERISTICS':
+                in_section = True
+                continue
+            if k in section_headers:
+                in_section = False
+                continue
+            if in_section and row[1] not in (None, ''):
+                v = row[1]
+                if isinstance(v, float) and v.is_integer():
+                    v = str(int(v))
+                pairs[k] = str(v).strip()
+        return pairs
     name = get('Commercial Name')
     product = {
         'ref':        get('Product Reference'),
@@ -107,6 +130,9 @@ def parse_xlsm(xlsm_bytes):
         highlights_raw = get('Benefits Highlights') or get('Short description detail')
         if highlights_raw:
             product['benefits'] = summarize_highlights(highlights_raw)
+    tech_bullets = extract_tech_bullets(get_technical_characteristics())
+    if tech_bullets:
+        product['benefits'] = product['benefits'][:6 - len(tech_bullets)] + tech_bullets
     product['images_b64'] = extract_images_b64(buf)
     return product
 
@@ -363,6 +389,34 @@ def summarize_highlights(highlights_text):
         return [(l, '') for l in lines[:6]]
     except Exception as e:
         print(f"Highlights summarize error: {e}")
+        return []
+
+
+def extract_tech_bullets(tech_pairs, count=2):
+    """Use Claude Haiku to pick the most catalog-worthy concrete specs from the
+    TECHNICAL CHARACTERISTICS table (e.g. '360 dk pil ömrü', '8000 rpm motor')."""
+    if not tech_pairs:
+        return []
+    try:
+        import anthropic
+        client = anthropic.Anthropic()
+        table_text = '\n'.join(f'{k}: {v}' for k, v in tech_pairs.items())
+        prompt = (
+            f"Asagidaki teknik ozellik tablosundan katalog kartinda gosterilecek "
+            f"en carpici {count} somut teknik ozelligi sec (ornek: '8000 rpm motor', "
+            f"'360 dk pil omru'). Sadece {count} madde don, satir satir yaz, "
+            "numara veya tire koyma, baska hicbir aciklama ekleme.\n\n"
+            f"Tablo:\n{table_text}"
+        )
+        message = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=150,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        lines = [l.strip(' -•\t') for l in message.content[0].text.strip().split('\n') if l.strip()]
+        return [(l, '') for l in lines[:count]]
+    except Exception as e:
+        print(f"Tech bullets error: {e}")
         return []
 
 # ─── Endpoints ─────────────────────────────────────────────────────────────────
