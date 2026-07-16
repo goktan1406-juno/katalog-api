@@ -197,13 +197,6 @@ def draw_card(cv, x, y, cw, ch, product):
                          preserveAspectRatio=True, anchor='c', mask='auto')
         except: pass
 
-    # Red accent line under image (raised slightly to overlap the image edge)
-    accent_y = img_bot + 2*mm
-    cv.setStrokeColor(RED); cv.setLineWidth(1.5)
-    cv.line(x, accent_y, x + cw * 0.38, accent_y)
-    cv.setStrokeColor(colors.HexColor('#E8E8E8')); cv.setLineWidth(0.4)
-    cv.line(x + cw * 0.38 + 1.5*mm, accent_y, x + cw, accent_y)
-
     # Product name — tight gap, compact line spacing
     ty = img_bot - 2.5*mm
     cv.setFillColor(DARK); cv.setFont(FB(), 8)
