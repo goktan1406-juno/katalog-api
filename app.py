@@ -103,6 +103,10 @@ def parse_xlsm(xlsm_bytes):
         d = get(f'Benefit detail {i}')
         if t and t.lower() not in ('none','') and t not in seen:
             seen.add(t); product['benefits'].append((t,d))
+    if not product['benefits']:
+        highlights_raw = get('Benefits Highlights') or get('Short description detail')
+        if highlights_raw:
+            product['benefits'] = summarize_highlights(highlights_raw)
     product['images_b64'] = extract_images_b64(buf)
     return product
 
@@ -336,6 +340,30 @@ def match_with_claude(img_b64, media_type, categories):
     except Exception as e:
         print(f"Claude match error: {e}")
         return list(categories)[0] if categories else 'GENEL'
+
+
+def summarize_highlights(highlights_text):
+    """Use Claude Haiku to turn a long highlights/description paragraph into short bullet points."""
+    try:
+        import anthropic
+        client = anthropic.Anthropic()
+        prompt = (
+            "Asagidaki urun tanitim metnini katalog kartinda gosterilecek kisa "
+            "maddeler halinde ozetle. Her madde en fazla 6-8 kelime olsun, "
+            "toplam 4-6 madde don. Sadece maddeleri satir satir yaz, "
+            "numara veya tire koyma, baska hicbir aciklama ekleme.\n\n"
+            f"Metin: {highlights_text}"
+        )
+        message = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=300,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        lines = [l.strip(' -•\t') for l in message.content[0].text.strip().split('\n') if l.strip()]
+        return [(l, '') for l in lines[:6]]
+    except Exception as e:
+        print(f"Highlights summarize error: {e}")
+        return []
 
 # ─── Endpoints ─────────────────────────────────────────────────────────────────
 
