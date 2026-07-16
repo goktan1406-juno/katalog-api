@@ -78,9 +78,18 @@ def parse_xlsm(xlsm_bytes):
             if row[0] and str(row[0]).strip() == label:
                 return str(row[1]).strip() if row[1] else ''
         return ''
+    def get_raw(label):
+        for row in rt.iter_rows(values_only=True):
+            if row[0] and str(row[0]).strip() == label:
+                v = row[1]
+                if isinstance(v, float) and v.is_integer():
+                    return str(int(v))
+                return str(v).strip() if v else ''
+        return ''
     name = get('Commercial Name')
     product = {
-        'ref':      get('Product Reference'),
+        'ref':        get('Product Reference'),
+        'product_id': get_raw('Product Id'),
         'brand':    get('Brand'),
         'name':     name,
         'claim':    get('Key claim'),
@@ -188,11 +197,12 @@ def draw_card(cv, x, y, cw, ch, product):
                          preserveAspectRatio=True, anchor='c', mask='auto')
         except: pass
 
-    # Red accent line under image
+    # Red accent line under image (raised slightly to overlap the image edge)
+    accent_y = img_bot + 2*mm
     cv.setStrokeColor(RED); cv.setLineWidth(1.5)
-    cv.line(x, img_bot, x + cw * 0.38, img_bot)
+    cv.line(x, accent_y, x + cw * 0.38, accent_y)
     cv.setStrokeColor(colors.HexColor('#E8E8E8')); cv.setLineWidth(0.4)
-    cv.line(x + cw * 0.38 + 1.5*mm, img_bot, x + cw, img_bot)
+    cv.line(x + cw * 0.38 + 1.5*mm, accent_y, x + cw, accent_y)
 
     # Product name — tight gap, compact line spacing
     ty = img_bot - 2.5*mm
@@ -204,9 +214,9 @@ def draw_card(cv, x, y, cw, ch, product):
         cv.drawString(x, ty, ln)
         ty -= 4*mm
 
-    # Ref code (no extra pre-gap)
+    # Product ID (no extra pre-gap)
     cv.setFillColor(DGRAY); cv.setFont(F(), 6)
-    cv.drawString(x, ty, product.get('ref', ''))
+    cv.drawString(x, ty, product.get('product_id', ''))
     ty -= 3.5*mm
 
     # Separator
