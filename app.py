@@ -15,6 +15,11 @@ from PIL import Image
 import reportlab
 
 app = Flask(__name__)
+# Werkzeug 3.1+ caps non-file form fields (e.g. prev_state_json, which grows as the
+# catalog accumulates products) at 500KB by default; raise it so accumulated state
+# doesn't start failing once the catalog grows past a handful of products.
+app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024
+app.config['MAX_FORM_MEMORY_SIZE'] = 200 * 1024 * 1024
 
 FONT_MAP = {}
 fonts_loaded = False
