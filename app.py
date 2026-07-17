@@ -372,6 +372,24 @@ CATEGORY_SPEC_HINTS = [
     (('kettle', 'su isitici'),
      "watt gucu, litre cinsinden kapasite, kapak ozelligi, "
      "(varsa) kirec filtresi, (varsa) 360 derece donebilir taban", 4),
+    (('duzlestir', 'straight'),
+     "plaka tipi/materyali (orn. seramik), iyonik/statik azaltici teknoloji, "
+     "sicaklik ayari sayisi ve araligi (derece C), 2'si 1 arada kullanim ozelligi "
+     "(duzlestirme+bukle), hizli isinma suresi (saniye), asiri isinmayi onleyen koruma", 4),
+    (('bathroom scale', 'banyo tart', 'vucut tart'),
+     "max kg kapasite, LCD ekran, gr cinsinden hassasiyet, kolay temizlenir cam yuzey, "
+     "kilo/yag yuzdesi/vucut kitle indeksi olcumu, kac kisilik hafiza", 4),
+    (('tras makine', 'male beauty', 'x series'),
+     "wet&dry (su altinda kullanim), titanyum kaplama, RPM motor gucu, "
+     "sac/sakal kesim uzunlugu secenekleri (mm), vucut/burun/kulak tras baslik aksesuarlari, "
+     "sarjla calisma suresi (dk)", 4),
+    (('vantilator', 'fans clas', 'fan clas', 'fans other', 'fan other'),
+     "otomatik ve dikey salinim secenekleri, hiz kademesi ve turbo, uzaktan kumanda, "
+     "gece modu, hava salinimi (m3/dk), ses seviyesi (dB), zaman ayari (saat), "
+     "elektronik kontrol paneli", 4),
+    (('eco safe', 'comfort eco', 'seramik isitici', 'fanli isitici', 'oda isitici'),
+     "seramik fanli isitma teknolojisi, m2 cinsinden isitma alani, ses seviyesi (dB), "
+     "sogutma fonksiyonu, eko-fonksiyon, elektronik zamanlayicili otomatik acilma/kapanma", 4),
 ]
 
 def _match_category_hints(context_text):
