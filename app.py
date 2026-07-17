@@ -28,7 +28,8 @@ except Exception:
     COOKWARE_RANGES = {}
 
 _WORLD_NUMBER_ONE_RE = re.compile(
-    r'(?i)d[üu]nyan[ıi]n\s*(bir|1)\s*numara|world.?s?\s*(number\s*(one|1)|no\.?\s*1|#\s*1)')
+    r'(?i)d[üu]nyan[ıi]n\s*[#]?\s*(bir|1)[\.\s]*numara'
+    r'|world.?s?\s*[#]?\s*(number\s*(one|1)|no\.?\s*1|#\s*1)')
 
 def _is_world_number_one_claim(text):
     return bool(_WORLD_NUMBER_ONE_RE.search(text or ''))
@@ -580,6 +581,7 @@ def summarize_highlights(highlights_text):
             messages=[{"role": "user", "content": prompt}],
         )
         lines = [l.strip(' -•\t') for l in message.content[0].text.strip().split('\n') if l.strip()]
+        lines = [l for l in lines if not _is_world_number_one_claim(l)]
         return [(l, '') for l in lines[:6]]
     except Exception as e:
         print(f"Highlights summarize error: {e}")
