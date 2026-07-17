@@ -242,8 +242,15 @@ def parse_xlsm(xlsm_bytes, filename=None):
                     v = str(int(v))
                 pairs[k] = str(v).strip()
         return pairs
-    name = translate_name_to_turkish(trim_name_to_core(get('Commercial Name')))
     category = get('PL') or get('Family L1') or 'GENEL'
+    raw_name = get('Commercial Name')
+    if category == 'KITCHENWARE & DINNER':
+        # Kitchenware names put the distinguishing part AFTER the first comma
+        # (e.g. "Ingenio+ Serisi, Rende") — trimming there like other categories
+        # would keep the generic range label and drop the actual product name.
+        name = translate_name_to_turkish(raw_name)
+    else:
+        name = translate_name_to_turkish(trim_name_to_core(raw_name))
     range_field = get('Family L2') or get('Range name') or get('Range') or get('Series')
     if category == 'COOKWARE & BAKEWARE' and filename:
         name = os.path.splitext(os.path.basename(filename))[0]
