@@ -56,6 +56,97 @@ def find_cookware_size_table(name):
         return COOKWARE_RANGES[match[0]]
     return None
 
+try:
+    with open(os.path.join(os.path.dirname(__file__), 'kitchenware_ranges.json'), encoding='utf-8') as _f:
+        KITCHENWARE_ITEMS = json.load(_f)
+except Exception:
+    KITCHENWARE_ITEMS = {}
+
+COLOR_WORDS = {
+    'siyah': 'Siyah', 'black': 'Siyah',
+    'beyaz': 'Beyaz', 'white': 'Beyaz',
+    'kirmizi': 'Kırmızı', 'kırmızı': 'Kırmızı', 'red': 'Kırmızı',
+    'koyu mavi': 'Koyu Mavi',
+    'acik mavi': 'Açık Mavi', 'açık mavi': 'Açık Mavi',
+    'mavi': 'Mavi', 'blue': 'Mavi',
+    'pastel yesil': 'Pastel Yeşil', 'pastel yeşil': 'Pastel Yeşil',
+    'yesil': 'Yeşil', 'yeşil': 'Yeşil', 'green': 'Yeşil',
+    'turuncu': 'Turuncu', 'orange': 'Turuncu',
+    'sari': 'Sarı', 'sarı': 'Sarı', 'yellow': 'Sarı',
+    'pembe': 'Pembe', 'pink': 'Pembe',
+    'mor': 'Mor', 'purple': 'Mor',
+    'bordo': 'Bordo',
+    'antrasit': 'Antrasit',
+    'gri': 'Gri', 'gray': 'Gri', 'grey': 'Gri',
+    'pudra': 'Pudra',
+    'parlak beyaz': 'Parlak Beyaz',
+    'parlak siyah': 'Parlak Siyah',
+}
+COLOR_KEYS_SORTED = sorted(COLOR_WORDS.keys(), key=len, reverse=True)
+
+COLOR_RGB_HEX = {
+    'Siyah': '#1A1A1A', 'Beyaz': '#F5F5F5', 'Kırmızı': '#D32F2F',
+    'Mavi': '#1976D2', 'Koyu Mavi': '#0D47A1', 'Açık Mavi': '#64B5F6',
+    'Yeşil': '#388E3C', 'Pastel Yeşil': '#A5D6A7', 'Turuncu': '#F57C00',
+    'Sarı': '#FBC02D', 'Pembe': '#EC407A', 'Mor': '#7B1FA2', 'Bordo': '#7B1E2B',
+    'Antrasit': '#37474F', 'Gri': '#9E9E9E', 'Pudra': '#E8B4B8',
+    'Parlak Beyaz': '#FFFFFF', 'Parlak Siyah': '#000000',
+}
+
+def _strip_colors(text):
+    t = text
+    for key in COLOR_KEYS_SORTED:
+        t = re.sub(r'(?i)(?<![a-zçğıöşü])' + re.escape(key) + r'(?![a-zçğıöşü])', '', t)
+    return t
+
+def _strip_sizes(text):
+    t = text
+    t = re.sub(r'(?i)\d+([.,]\d+)?\s*cm\s*x\s*\d+([.,]\d+)?\s*cm', ' ', t)
+    t = re.sub(r'(?i)\d+(?:[.,]\d+)?\s*(cm|l|ml|lt)\b\.?', ' ', t)
+    t = re.sub(r"(?i)\d+['’]?(li|lü|lı|lu|ü|u)\b", ' ', t)
+    t = re.sub(r'(?i)\d+\s*(parça|parca|adet)\b', ' ', t)
+    t = re.sub(r'\b\d+([&/]\d+)*\b', ' ', t)
+    return t
+
+def kitchenware_base_name(name):
+    """Normalize a product name to a base key by stripping color and size/capacity
+    tokens, so it can be matched against KITCHENWARE_ITEMS regardless of which
+    specific size/color SKU was uploaded."""
+    t = _strip_colors(name)
+    t = _strip_sizes(t)
+    t = re.sub(r'\s*-\s*', ' ', t)
+    t = re.sub(r'[,]+', ' ', t)
+    t = re.sub(r'\s+', ' ', t).strip(' -.,')
+    return t
+
+def find_kitchenware_item(name):
+    """Match a kitchenware product's base name against KITCHENWARE_ITEMS, tolerating
+    extra/missing words and small typos, the same way find_cookware_size_table does."""
+    base = kitchenware_base_name(name)
+    if not base:
+        return None
+    if base in KITCHENWARE_ITEMS:
+        return KITCHENWARE_ITEMS[base]
+    base_lower = base.strip().lower()
+    for k, v in KITCHENWARE_ITEMS.items():
+        if k.strip().lower() == base_lower:
+            return v
+    candidates = [(k, v) for k, v in KITCHENWARE_ITEMS.items() if k.strip().lower() in base_lower]
+    if candidates:
+        candidates.sort(key=lambda kv: -len(kv[0]))
+        return candidates[0][1]
+    base_nospace = base_lower.replace(' ', '')
+    candidates = [(k, v) for k, v in KITCHENWARE_ITEMS.items()
+                  if k.strip().lower().replace(' ', '') in base_nospace]
+    if candidates:
+        candidates.sort(key=lambda kv: -len(kv[0]))
+        return candidates[0][1]
+    import difflib
+    match = difflib.get_close_matches(base, list(KITCHENWARE_ITEMS.keys()), n=1, cutoff=0.6)
+    if match:
+        return KITCHENWARE_ITEMS[match[0]]
+    return None
+
 FONT_MAP = {}
 fonts_loaded = False
 
@@ -146,6 +237,7 @@ def parse_xlsm(xlsm_bytes, filename=None):
         return pairs
     name = translate_name_to_turkish(trim_name_to_core(get('Commercial Name')))
     category = get('PL') or get('Family L1') or 'GENEL'
+    range_field = get('Family L2') or get('Range name') or get('Range') or get('Series')
     if category == 'COOKWARE & BAKEWARE' and filename:
         name = os.path.splitext(os.path.basename(filename))[0]
     product = {
@@ -155,7 +247,7 @@ def parse_xlsm(xlsm_bytes, filename=None):
         'name':     name,
         'claim':    get('Key claim'),
         'category': category,
-        'series':   get('Family L2') or get('Range name') or get('Range') or get('Series') or ' '.join(name.split()[:2]),
+        'series':   range_field or ' '.join(name.split()[:2]),
         'benefits': [],
     }
     seen = set()
@@ -177,6 +269,10 @@ def parse_xlsm(xlsm_bytes, filename=None):
         product['benefits'] = product['benefits'][:6 - len(tech_bullets)] + tech_bullets
     if category == 'COOKWARE & BAKEWARE':
         product['size_table'] = find_cookware_size_table(name) or []
+    elif category == 'KITCHENWARE':
+        kw_item = find_kitchenware_item(name)
+        product['size_table'] = (kw_item or {}).get('sizes', [])
+        product['size_colors'] = (kw_item or {}).get('colors', [])
     product['images_b64'] = extract_images_b64(buf)
     return product
 
@@ -296,6 +392,22 @@ def draw_card(cv, x, y, cw, ch, product):
             cv.setFillColor(DGRAY); cv.setFont(F(), 6)
             cv.drawString(x, ty, text)
             ty -= 3.2*mm
+
+    # Color options (KITCHENWARE items with more than one available color)
+    size_colors = product.get('size_colors')
+    if size_colors and len(size_colors) > 1 and ty - 5*mm >= bottom_limit:
+        ty -= 0.5*mm
+        cv.setFillColor(DGRAY); cv.setFont(F(), 6)
+        cv.drawString(x, ty, 'MEVCUT RENKLER')
+        dot_x = x + tw(cv, 'MEVCUT RENKLER ', F(), 6)
+        for cname in size_colors:
+            if dot_x + 2.4*mm > x + cw: break
+            hexcol = COLOR_RGB_HEX.get(cname, '#BDBDBD')
+            cv.setFillColor(colors.HexColor(hexcol))
+            cv.setStrokeColor(colors.HexColor('#999999')); cv.setLineWidth(0.3)
+            cv.circle(dot_x + 1.2*mm, ty + 0.7*mm, 1.2*mm, fill=1, stroke=1)
+            dot_x += 3*mm
+        ty -= 3.2*mm
 
 def build_pdf(products, output_path, category):
     # Group same-series products together so they appear side by side
