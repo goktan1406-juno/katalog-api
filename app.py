@@ -248,7 +248,8 @@ def parse_xlsm(xlsm_bytes, filename=None, force_category=None):
         # Kitchenware names put the distinguishing part AFTER the first comma
         # (e.g. "Ingenio+ Serisi, Rende") — trimming there like other categories
         # would keep the generic range label and drop the actual product name.
-        name = simplify_storage_container_name(translate_name_to_turkish(raw_name))
+        name = simplify_storage_container_name(
+            ensure_kitchenware_name_turkish(translate_name_to_turkish(raw_name)))
     else:
         name = translate_name_to_turkish(trim_name_to_core(raw_name))
     range_field = get('Family L2') or get('Range name') or get('Range') or get('Series')
@@ -286,6 +287,10 @@ def parse_xlsm(xlsm_bytes, filename=None, force_category=None):
     elif category == 'KITCHENWARE & DINNER':
         kw_item = find_kitchenware_item(name)
         product['size_colors'] = (kw_item or {}).get('colors', [])
+        if re.search(r'(?i)saklama kab', name):
+            # Storage containers: show the range's available capacities, same as
+            # cookware's size table (mugs/utensils just get the color reference).
+            product['size_table'] = (kw_item or {}).get('sizes', [])
     product['images_b64'] = extract_images_b64(buf)
     return product
 
@@ -661,6 +666,40 @@ def simplify_storage_container_name(name):
     t = re.sub(r'(?i)\bseti?\b', ' ', t)
     t = re.sub(r'\s+', ' ', t).strip(' -,')
     return t
+
+_ENGLISH_NAME_HINTS = (
+    ' and ', ' with ', ' set:', '-piece', 'knife', 'knives', 'steel', 'stainless',
+    'chef', 'jug', 'jugs', 'peeler', 'board', 'storage', 'container', 'cutting',
+    'paring', 'utility', 'thermos', 'flask', 'bottle', 'colander',
+)
+
+def ensure_kitchenware_name_turkish(name):
+    """Translate an English-looking kitchenware product name to Turkish, keeping
+    brand/model words (proper nouns) untouched; Turkish names pass through as-is."""
+    if not name:
+        return name
+    if not any(h in name.lower() for h in _ENGLISH_NAME_HINTS):
+        return name
+    try:
+        import anthropic
+        client = anthropic.Anthropic()
+        prompt = (
+            "Asagida bir mutfak urununun adi var. Ingilizce kelimeleri Turkceye "
+            "cevir (ornek: 'Knife' -> 'Bicak', 'Steel' -> 'Celik', 'Set' -> 'Set', "
+            "'Jug' -> 'Sürahi/Termos'). Marka/seri isimlerini (ornek: Ice Force, "
+            "Comfort, Mambo, EverSharp, Ingenio, MasterSeal) oldugu gibi, cevirmeden "
+            "birak. Sadece cevrilmis urun adini yaz, baska hicbir aciklama ekleme.\n\n"
+            f"{name}"
+        )
+        message = client.messages.create(
+            model="claude-haiku-4-5", max_tokens=100,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        translated = message.content[0].text.strip().strip('"')
+        return translated or name
+    except Exception as e:
+        print(f"Name translate error: {e}")
+        return name
 
 # ─── Endpoints ─────────────────────────────────────────────────────────────────
 
