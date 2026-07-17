@@ -346,18 +346,24 @@ def summarize_highlights(highlights_text):
         return []
 
 
-# Category-specific priority hints: (keyword-matcher over category/series/name/ref, guidance text).
-# When a product matches, its guidance is injected into the tech-bullet prompt so Claude
-# prioritizes the specs that actually matter for that product type over generic ones.
+# Category-specific priority hints: (keyword-matcher over category/series/name/ref, guidance
+# text, optional bullet count). When a product matches, its guidance is injected into the
+# tech-bullet prompt so Claude prioritizes the specs that actually matter for that product
+# type over generic ones. Count defaults to 2 when omitted.
 CATEGORY_SPEC_HINTS = [
     (('torbal', 'fc'), "ses yuksekligi (dB), toz haznesi kapasitesi, baslik secenekleri, kutudan cikan aksesuarlar"),
     (('dikey', 'sarjli', 'kablosuz supurge'), "air watt gucu, sarjla calisma suresi (dk), aksesuarlar, toz haznesi kapasitesi"),
+    (('utu', 'steam iron', 'steam st', 'st station', 'buhar kazanl'),
+     "watt gucu, sok buhar (g/dk), surekli buhar cikisi (g/dk), taban tipi/kaplamasi, su haznesi kapasitesi (ml/L)", 4),
 ]
 
 def _match_category_hints(context_text):
     text = context_text.lower()
-    matched = [hint for keywords, hint in CATEGORY_SPEC_HINTS if any(k in text for k in keywords)]
-    return '; '.join(matched)
+    matched = [(hint, m[2] if len(m) > 2 else None) for m in CATEGORY_SPEC_HINTS
+               for keywords, hint in [(m[0], m[1])] if any(k in text for k in keywords)]
+    hint_text = '; '.join(h for h, _ in matched)
+    counts = [c for _, c in matched if c]
+    return hint_text, (max(counts) if counts else None)
 
 
 def extract_tech_bullets(tech_pairs, product_name='', category_context='', count=2):
@@ -371,7 +377,9 @@ def extract_tech_bullets(tech_pairs, product_name='', category_context='', count
         import anthropic
         client = anthropic.Anthropic()
         table_text = '\n'.join(f'{k}: {v}' for k, v in tech_pairs.items())
-        priority_hint = _match_category_hints(f'{category_context} {product_name}')
+        priority_hint, priority_count = _match_category_hints(f'{category_context} {product_name}')
+        if priority_count:
+            count = priority_count
         priority_line = (
             f"Bu urun icin ozellikle su spesifikasyonlara oncelik ver: {priority_hint}.\n"
             if priority_hint else ''
