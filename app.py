@@ -43,6 +43,13 @@ def find_cookware_size_table(name):
     if candidates:
         candidates.sort(key=lambda kv: -len(kv[0]))
         return candidates[0][1]
+    # space-insensitive substring (e.g. "EasyCook" key vs "Easy Cook" in the filename)
+    name_nospace = name_lower.replace(' ', '')
+    candidates = [(k, v) for k, v in COOKWARE_RANGES.items()
+                  if k.strip().lower().replace(' ', '') in name_nospace]
+    if candidates:
+        candidates.sort(key=lambda kv: -len(kv[0]))
+        return candidates[0][1]
     import difflib
     match = difflib.get_close_matches(name, list(COOKWARE_RANGES.keys()), n=1, cutoff=0.6)
     if match:
