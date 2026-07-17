@@ -130,7 +130,9 @@ def parse_xlsm(xlsm_bytes):
         highlights_raw = get('Benefits Highlights') or get('Short description detail')
         if highlights_raw:
             product['benefits'] = summarize_highlights(highlights_raw)
-    tech_bullets = extract_tech_bullets(get_technical_characteristics())
+    category_context = f"{product['category']} {product['series']} {product['ref']}"
+    tech_bullets = extract_tech_bullets(get_technical_characteristics(), product_name=name,
+                                         category_context=category_context)
     if tech_bullets:
         product['benefits'] = product['benefits'][:6 - len(tech_bullets)] + tech_bullets
     product['images_b64'] = extract_images_b64(buf)
@@ -180,35 +182,6 @@ def draw_page_chrome(cv, page_num, category):
     cv.drawRightString(W-8*mm, 3.5*mm, 'tefal.com.tr')
     cv.setFillColor(DARK); cv.setFont(FB(), 7)
     cv.drawCentredString(W/2, 3.5*mm, f'{page_num} | TEFAL')
-
-def draw_lifestyle_banner(cv, x, y_top, w, h, lifestyle_b64, category):
-    """Full-width lifestyle image banner on page 1. y_top = top edge in PDF coords."""
-    img_reader = b64_to_reader(lifestyle_b64)
-
-    # Background fill in case image doesn't cover fully
-    cv.setFillColor(LGRAY)
-    cv.rect(x, y_top - h, w, h, fill=1, stroke=0)
-
-    if img_reader:
-        try:
-            cv.drawImage(img_reader, x, y_top - h, w, h,
-                         preserveAspectRatio=True, anchor='c', mask='auto')
-        except: pass
-
-    # Dark text bar at bottom of banner (brand consistent with header)
-    bar_h = 10*mm
-    cv.setFillColor(DARK)
-    cv.rect(x, y_top - h, w, bar_h, fill=1, stroke=0)
-    # Red left accent stripe
-    cv.setFillColor(RED)
-    cv.rect(x, y_top - h, 3.5*mm, bar_h, fill=1, stroke=0)
-    # Category label in white
-    cv.setFillColor(WHITE); cv.setFont(FB(), 9)
-    cv.drawString(x + 6.5*mm, y_top - h + 3.5*mm, category.upper())
-
-    # Separator line at top of banner
-    cv.setStrokeColor(MGRAY); cv.setLineWidth(0.3)
-    cv.line(x, y_top, x + w, y_top)
 
 def draw_card(cv, x, y, cw, ch, product):
     """3-column card: white image, bold name, tightly packed bullet features."""
@@ -263,7 +236,7 @@ def draw_card(cv, x, y, cw, ch, product):
         cv.drawString(BUL_X, ty, text)
         ty -= 3.5*mm
 
-def build_pdf(products, output_path, category, lifestyle_image=None):
+def build_pdf(products, output_path, category):
     # Group same-series products together so they appear side by side
     products = sorted(products, key=lambda p: (p.get('series', ''), p.get('name', '')))
 
@@ -277,28 +250,18 @@ def build_pdf(products, output_path, category, lifestyle_image=None):
     COLS     = 3
     COL_GAP  = 6*mm
     ROW_GAP  = 8*mm
-    BANNER_H = 40*mm  # lifestyle banner on every page
 
     card_w = (W - 2*MARGIN - (COLS - 1)*COL_GAP) / COLS
     card_h = 95*mm
 
     usable_h = H - HDR_H - FTR_H - 2*MARGIN
-    if lifestyle_image:
-        usable_h -= (BANNER_H + ROW_GAP)
     rows_pp  = max(1, int((usable_h + ROW_GAP) / (card_h + ROW_GAP)))
     per_page = COLS * rows_pp
 
-    banner_top = H - HDR_H - MARGIN
-    if lifestyle_image:
-        product_start_y = banner_top - BANNER_H - ROW_GAP
-    else:
-        product_start_y = banner_top
+    product_start_y = H - HDR_H - MARGIN
 
     def init_page(pnum):
         draw_page_chrome(cv, pnum, category)
-        if lifestyle_image:
-            draw_lifestyle_banner(cv, MARGIN, banner_top,
-                                  W - 2*MARGIN, BANNER_H, lifestyle_image, category)
 
     page_num = 1
     init_page(page_num)
@@ -322,51 +285,6 @@ def build_pdf(products, output_path, category, lifestyle_image=None):
 
 # ─── In-memory catalog state ───────────────────────────────────────────────────
 CATALOG_STATE = defaultdict(dict)
-
-# ─── Claude Vision matching ────────────────────────────────────────────────────
-
-def match_with_claude(img_b64, media_type, categories):
-    """Use Claude Haiku Vision to pick the best-matching category for a lifestyle image."""
-    if not categories:
-        return 'GENEL'
-    if len(categories) == 1:
-        return list(categories)[0]
-    try:
-        import anthropic
-        client = anthropic.Anthropic()
-
-        if categories:
-            cat_list = ', '.join(sorted(categories))
-            prompt = (
-                f"Bu yasam tarzi mutfak gorseli hangi urun kategorisine en uygun? "
-                f"Kategoriler: {cat_list}. "
-                f"Sadece kategori adini yaz, baska hicbir sey yazma."
-            )
-        else:
-            prompt = "Bu gorseli 1-3 kelimeyle tanimla (mutfak urunu kategorisi)."
-
-        message = client.messages.create(
-            model="claude-haiku-4-5",
-            max_tokens=50,
-            messages=[{
-                "role": "user",
-                "content": [
-                    {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": img_b64}},
-                    {"type": "text", "text": prompt},
-                ],
-            }],
-        )
-
-        result = message.content[0].text.strip()
-        for cat in sorted(categories, key=len, reverse=True):
-            if cat.lower() in result.lower() or result.lower() in cat.lower():
-                return cat
-        return list(categories)[0] if categories else result
-
-    except Exception as e:
-        print(f"Claude match error: {e}")
-        return list(categories)[0] if categories else 'GENEL'
-
 
 def summarize_highlights(highlights_text):
     """Use Claude Haiku to turn a long highlights/description paragraph into short bullet points."""
@@ -392,19 +310,46 @@ def summarize_highlights(highlights_text):
         return []
 
 
-def extract_tech_bullets(tech_pairs, count=2):
+# Category-specific priority hints: (keyword-matcher over category/series/name/ref, guidance text).
+# When a product matches, its guidance is injected into the tech-bullet prompt so Claude
+# prioritizes the specs that actually matter for that product type over generic ones.
+CATEGORY_SPEC_HINTS = [
+    (('torbal', 'fc'), "ses yuksekligi (dB), toz haznesi kapasitesi, baslik secenekleri, kutudan cikan aksesuarlar"),
+    (('dikey', 'sarjli', 'kablosuz supurge'), "air watt gucu, sarjla calisma suresi (dk), aksesuarlar, toz haznesi kapasitesi"),
+]
+
+def _match_category_hints(context_text):
+    text = context_text.lower()
+    matched = [hint for keywords, hint in CATEGORY_SPEC_HINTS if any(k in text for k in keywords)]
+    return '; '.join(matched)
+
+
+def extract_tech_bullets(tech_pairs, product_name='', category_context='', count=2):
     """Use Claude Haiku to pick the most catalog-worthy concrete specs from the
-    TECHNICAL CHARACTERISTICS table (e.g. '360 dk pil ömrü', '8000 rpm motor')."""
+    TECHNICAL CHARACTERISTICS table, prioritizing the spec(s) that actually define
+    quality for that product type (e.g. steam pressure for an iron, wattage for a
+    blender, motor rpm for a razor, airflow for a hair dryer)."""
     if not tech_pairs:
         return []
     try:
         import anthropic
         client = anthropic.Anthropic()
         table_text = '\n'.join(f'{k}: {v}' for k, v in tech_pairs.items())
+        priority_hint = _match_category_hints(f'{category_context} {product_name}')
+        priority_line = (
+            f"Bu urun icin ozellikle su spesifikasyonlara oncelik ver: {priority_hint}.\n"
+            if priority_hint else ''
+        )
         prompt = (
-            f"Asagidaki teknik ozellik tablosundan katalog kartinda gosterilecek "
-            f"en carpici {count} somut teknik ozelligi sec (ornek: '8000 rpm motor', "
-            f"'360 dk pil omru'). Sadece {count} madde don, satir satir yaz, "
+            f"Urun: {product_name}\n\n"
+            f"Asagida bu urunun teknik ozellik tablosu var. Bu urun kategorisi icin "
+            f"alıcının en çok önemsediği, kaliteyi belirleyen somut spesifikasyonu/spesifikasyonları sec "
+            f"(örnek: ütü için buhar basıncı/buhar çıkışı, blender/mutfak robotu için watt güç, "
+            f"traş makinesi için motor hızı veya pil ömrü, saç kurutma makinesi için hava akışı/watt). "
+            f"Genel/sıradan özellikleri değil, o kategori için kritik olanı seç. "
+            f"{priority_line}"
+            f"Katalog kartında gösterilecek {count} kısa madde dön (örnek format: '2400W güç', "
+            f"'6 bar buhar basıncı'). Sadece {count} madde dön, satır satır yaz, "
             "numara veya tire koyma, baska hicbir aciklama ekleme.\n\n"
             f"Tablo:\n{table_text}"
         )
@@ -427,51 +372,12 @@ def health():
     summary = {cat: len(prods) for cat, prods in CATALOG_STATE.items()}
     return jsonify({'status': 'ok', 'fonts': list(FONT_MAP.keys()), 'state': summary})
 
-@app.route('/match_lifestyle', methods=['POST'])
-def match_lifestyle():
-    """Receive a lifestyle image, match it to a category using Claude Vision."""
-    try:
-        if 'file' not in request.files:
-            return jsonify({'error': 'file eksik'}), 400
-
-        categories = set(json.loads(request.form.get('categories_json', '[]')))
-
-        img_data = request.files['file'].read()
-
-        # Resize to max 1200px wide before sending to Claude
-        try:
-            im = Image.open(BytesIO(img_data))
-            if im.mode != 'RGB':
-                if im.mode == 'RGBA':
-                    bg = Image.new('RGB', im.size, (255, 255, 255))
-                    bg.paste(im, mask=im.split()[3]); im = bg
-                else:
-                    im = im.convert('RGB')
-            if im.width > 1200:
-                ratio = 1200 / im.width
-                im = im.resize((1200, int(im.height * ratio)), Image.LANCZOS)
-            out = BytesIO()
-            im.save(out, 'JPEG', quality=85)
-            img_data = out.getvalue()
-        except Exception as e:
-            print(f"Lifestyle image resize error: {e}")
-
-        img_b64 = base64.b64encode(img_data).decode()
-        matched = match_with_claude(img_b64, 'image/jpeg', categories)
-
-        return jsonify({'category': matched, 'image_b64': img_b64})
-
-    except Exception as e:
-        import traceback; print(traceback.format_exc())
-        return jsonify({'error': str(e)}), 500
-
 @app.route('/finalize', methods=['POST'])
 def finalize():
-    """Rebuild PDF for a category using provided state JSON + optional lifestyle image."""
+    """Rebuild PDF for a category using provided state JSON."""
     try:
         category    = request.form.get('category')
         state_json  = request.form.get('state_json')
-        lifestyle_b64 = request.form.get('lifestyle_b64') or None
 
         if not category or not state_json:
             return jsonify({'error': 'category ve state_json gerekli'}), 400
@@ -485,7 +391,7 @@ def finalize():
         with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
             out_path = tmp.name
 
-        build_pdf(products_list, out_path, category, lifestyle_image=lifestyle_b64)
+        build_pdf(products_list, out_path, category)
 
         with open(out_path, 'rb') as fh:
             pdf_data = fh.read()
@@ -522,14 +428,6 @@ def add_product():
             except Exception:
                 pass
 
-        # Restore lifestyle images map
-        lifestyle_map = {}
-        if 'lifestyle_images_json' in request.form:
-            try:
-                lifestyle_map = json.loads(request.form['lifestyle_images_json'])
-            except Exception:
-                pass
-
         xlsm_bytes = request.files['file'].read()
         product    = parse_xlsm(xlsm_bytes)
         category   = product['category'] or 'GENEL'
@@ -540,8 +438,7 @@ def add_product():
         with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
             out_path = tmp.name
 
-        build_pdf(products_list, out_path, category,
-                  lifestyle_image=lifestyle_map.get(category))
+        build_pdf(products_list, out_path, category)
 
         with open(out_path, 'rb') as fh:
             pdf_data = fh.read()
