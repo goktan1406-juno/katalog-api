@@ -69,7 +69,7 @@ def wrap(cv, text, font, size, max_w):
     if line: lines.append(line)
     return lines
 
-def parse_xlsm(xlsm_bytes):
+def parse_xlsm(xlsm_bytes, filename=None):
     buf = BytesIO(xlsm_bytes)
     wb  = load_workbook(buf, data_only=True)
     rt  = wb['RANGE TABLE']
@@ -110,13 +110,16 @@ def parse_xlsm(xlsm_bytes):
                 pairs[k] = str(v).strip()
         return pairs
     name = translate_name_to_turkish(trim_name_to_core(get('Commercial Name')))
+    category = get('PL') or get('Family L1') or 'GENEL'
+    if category == 'COOKWARE & BAKEWARE' and filename:
+        name = os.path.splitext(os.path.basename(filename))[0]
     product = {
         'ref':        get('Product Reference'),
         'product_id': get_raw('Product Id'),
         'brand':    get('Brand'),
         'name':     name,
         'claim':    get('Key claim'),
-        'category': get('PL') or get('Family L1') or 'GENEL',
+        'category': category,
         'series':   get('Family L2') or get('Range name') or get('Range') or get('Series') or ' '.join(name.split()[:2]),
         'benefits': [],
     }
@@ -531,7 +534,7 @@ def add_product():
                 pass
 
         xlsm_bytes = request.files['file'].read()
-        product    = parse_xlsm(xlsm_bytes)
+        product    = parse_xlsm(xlsm_bytes, filename=request.files['file'].filename)
         category   = product['category'] or 'GENEL'
 
         CATALOG_STATE[category][product['ref']] = product
