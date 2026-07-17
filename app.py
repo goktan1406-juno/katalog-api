@@ -27,6 +27,31 @@ try:
 except Exception:
     COOKWARE_RANGES = {}
 
+_WORLD_NUMBER_ONE_RE = re.compile(
+    r'(?i)d[üu]nyan[ıi]n\s*(bir|1)\s*numara|world.?s?\s*(number\s*(one|1)|no\.?\s*1|#\s*1)')
+
+def _is_world_number_one_claim(text):
+    return bool(_WORLD_NUMBER_ONE_RE.search(text or ''))
+
+def strip_measurement_from_name(name):
+    """Drop cm measurements from a product name (e.g. 'DeliBake Kelepçeli 24cm'
+    -> 'DeliBake Kelepçeli') — used for bakeware items shown individually rather
+    than as a whole size range."""
+    if not name:
+        return name
+    t = re.sub(r'(?i)\s*-?\s*\d+([.,]\d+)?\s*cm\b\.?', '', name)
+    t = re.sub(r'\s+', ' ', t).strip(' -,')
+    return t
+
+_GENERIC_EXPORT_FILENAME = re.compile(r'(?i)^RC-[A-Z0-9]+-[A-Z]\d{8,}-[a-z]{2}_[A-Z]{2,3}$')
+
+def _is_generic_export_filename(filename):
+    """PIM auto-exports (e.g. 'RC-31BA-G1784297216199-tr_TR.xlsm') aren't range
+    names — unlike hand-named range files ('Excellence+.xlsm') — so they shouldn't
+    be used as the card title."""
+    stem = os.path.splitext(os.path.basename(filename))[0]
+    return bool(_GENERIC_EXPORT_FILENAME.match(stem))
+
 def find_cookware_size_table(name):
     """Match a cookware filename-derived title against COOKWARE_RANGES, tolerating
     extra words (e.g. 'Ingenio Unlimited On 6X 12 Parca Set' -> 'Unlimited') and
@@ -265,14 +290,21 @@ def parse_xlsm(xlsm_bytes, filename=None, force_category=None):
     else:
         name = translate_name_to_turkish(trim_name_to_core(raw_name))
     range_field = get('Family L2') or get('Range name') or get('Range') or get('Series')
-    if category == 'COOKWARE & BAKEWARE' and filename:
+    if category == 'COOKWARE & BAKEWARE' and filename and not _is_generic_export_filename(filename):
         name = os.path.splitext(os.path.basename(filename))[0]
+    elif category == 'COOKWARE & BAKEWARE':
+        # Individual bakeware SKUs (e.g. cake molds) shown one-per-card, not as a
+        # whole size range — the cm measurement in the name is redundant clutter.
+        name = strip_measurement_from_name(name)
+    claim = get('Key claim')
+    if _is_world_number_one_claim(claim):
+        claim = ''
     product = {
         'ref':        get('Product Reference'),
         'product_id': get_raw('Product Id'),
         'brand':    get('Brand'),
         'name':     name,
-        'claim':    get('Key claim'),
+        'claim':    claim,
         'category': category,
         'series':   range_field or ' '.join(name.split()[:2]),
         'benefits': [],
@@ -281,7 +313,8 @@ def parse_xlsm(xlsm_bytes, filename=None, force_category=None):
     for i in ['1 (USP)','2','3','4','5','6','7','8']:
         t = get(f'Benefit title {i}')
         d = get(f'Benefit detail {i}')
-        if t and t.lower() not in ('none','') and t not in seen:
+        if (t and t.lower() not in ('none','') and t not in seen
+                and not _is_world_number_one_claim(t) and not _is_world_number_one_claim(d)):
             seen.add(t); product['benefits'].append((t,d))
     if product['benefits']:
         product['benefits'] = ensure_benefits_turkish(product['benefits'])
