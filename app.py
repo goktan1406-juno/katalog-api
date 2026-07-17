@@ -358,6 +358,20 @@ CATEGORY_SPEC_HINTS = [
     (('tost makine', 'toast'),
      "watt gucu, ekmek kapasitesi, firin fonksiyonu, plaka materyali, cikarilabilir plakalar, "
      "bulasik makinesinde yikanabilirlik, 180 derece izgara pozisyonu, yag toplama haznesi", 4),
+    (('handblend', 'stick mixr', 'el blender', 'hand blend'),
+     "dograyici hazne kapasitesi, dograyici hazne materyali, watt gucu, "
+     "karistirma kabi hazne kapasitesi, bicak sayisi, aksesuarlar", 4),
+    (('blender',),
+     "watt gucu, hazne kapasitesi, hazne materyali, bicak sayisi, "
+     "(sadece fresh express modellerinde) baslik sayisi", 4),
+    (('kiyma makine', 'meat mincer', 'mincer'),
+     "watt gucu, dakikada kac kg'a kadar kiyma kapasitesi, kac adet paslanmaz celik plaka", 3),
+    (('caydanlik', 'tea maker', 'cay makine'),
+     "litre cinsinden paslanmaz celik/cam su isitici kapasitesi, litre cinsinden celik/cam demlik kapasitesi, "
+     "govde materyali, watt gucu", 4),
+    (('kettle', 'su isitici'),
+     "watt gucu, litre cinsinden kapasite, kapak ozelligi, "
+     "(varsa) kirec filtresi, (varsa) 360 derece donebilir taban", 4),
 ]
 
 def _match_category_hints(context_text):
