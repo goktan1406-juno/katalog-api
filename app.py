@@ -126,6 +126,8 @@ def parse_xlsm(xlsm_bytes):
         d = get(f'Benefit detail {i}')
         if t and t.lower() not in ('none','') and t not in seen:
             seen.add(t); product['benefits'].append((t,d))
+    if product['benefits']:
+        product['benefits'] = ensure_benefits_turkish(product['benefits'])
     if not product['benefits']:
         highlights_raw = get('Benefits Highlights') or get('Short description detail')
         if highlights_raw:
@@ -286,6 +288,40 @@ def build_pdf(products, output_path, category):
 # ─── In-memory catalog state ───────────────────────────────────────────────────
 CATALOG_STATE = defaultdict(dict)
 
+_ENGLISH_BULLET_HINTS = (
+    'the ', ' and ', ' with ', ' for ', ' our ', ' your ', 'cleaning', 'vacuuming',
+    'brush', 'effortless', 'deep', 'complete', 'set', 'power', 'technology',
+)
+
+def ensure_benefits_turkish(benefits):
+    """Translate English-looking bullet titles pulled straight from the raw
+    Benefit title/detail fields; Turkish ones pass through unchanged."""
+    titles = [t for t, _ in benefits]
+    combined = ' '.join(titles).lower()
+    if not any(h in combined for h in _ENGLISH_BULLET_HINTS):
+        return benefits
+    try:
+        import anthropic
+        client = anthropic.Anthropic()
+        prompt = (
+            f"Asagidaki {len(titles)} urun ozelligi maddesini incele. Ingilizce "
+            "olanlari Turkceye cevir, zaten Turkce olanlari degistirmeden ayni "
+            f"birak. Tam olarak {len(titles)} madde don, satir satir, ayni "
+            "sirada, numara veya tire koyma, baska hicbir aciklama ekleme.\n\n"
+            + '\n'.join(titles)
+        )
+        message = client.messages.create(
+            model="claude-haiku-4-5", max_tokens=400,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        lines = [l.strip(' -•\t') for l in message.content[0].text.strip().split('\n') if l.strip()]
+        if len(lines) == len(titles):
+            return [(lines[i], benefits[i][1]) for i in range(len(titles))]
+        return benefits
+    except Exception as e:
+        print(f"Benefit translate error: {e}")
+        return benefits
+
 def summarize_highlights(highlights_text):
     """Use Claude Haiku to turn a long highlights/description paragraph into short bullet points."""
     try:
@@ -348,9 +384,11 @@ def extract_tech_bullets(tech_pairs, product_name='', category_context='', count
             f"traş makinesi için motor hızı veya pil ömrü, saç kurutma makinesi için hava akışı/watt). "
             f"Genel/sıradan özellikleri değil, o kategori için kritik olanı seç. "
             f"{priority_line}"
-            f"Katalog kartında gösterilecek {count} kısa madde dön (örnek format: '2400W güç', "
-            f"'6 bar buhar basıncı'). Sadece {count} madde dön, satır satır yaz, "
-            "numara veya tire koyma, baska hicbir aciklama ekleme.\n\n"
+            f"Tablo ne kadar sınırlı olursa olsun, mutlaka elindeki en somut/sayısal "
+            f"{count} veriyi seçip madde haline getir. Asla soru sorma, özür dileme "
+            f"veya yorum yazma — sadece {count} kısa madde dön (örnek format: "
+            f"'2400W güç', '6 bar buhar basıncı'), satır satır, numara veya tire "
+            "koyma, baska hicbir aciklama ekleme.\n\n"
             f"Tablo:\n{table_text}"
         )
         message = client.messages.create(
@@ -359,6 +397,9 @@ def extract_tech_bullets(tech_pairs, product_name='', category_context='', count
             messages=[{"role": "user", "content": prompt}],
         )
         lines = [l.strip(' -•\t') for l in message.content[0].text.strip().split('\n') if l.strip()]
+        # Discard hedging/refusal-style responses (long sentences, questions) —
+        # a real bullet is short; keep only lines that actually look like one.
+        lines = [l for l in lines if len(l) <= 60 and '?' not in l]
         return [(l, '') for l in lines[:count]]
     except Exception as e:
         print(f"Tech bullets error: {e}")
