@@ -269,7 +269,7 @@ def parse_xlsm(xlsm_bytes, filename=None):
         product['benefits'] = product['benefits'][:6 - len(tech_bullets)] + tech_bullets
     if category == 'COOKWARE & BAKEWARE':
         product['size_table'] = find_cookware_size_table(name) or []
-    elif category == 'KITCHENWARE':
+    elif category == 'KITCHENWARE & DINNER':
         kw_item = find_kitchenware_item(name)
         product['size_table'] = (kw_item or {}).get('sizes', [])
         product['size_colors'] = (kw_item or {}).get('colors', [])
