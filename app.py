@@ -355,6 +355,9 @@ CATEGORY_SPEC_HINTS = [
     (('dikey', 'sarjli', 'kablosuz supurge'), "air watt gucu, sarjla calisma suresi (dk), aksesuarlar, toz haznesi kapasitesi"),
     (('utu', 'steam iron', 'steam st', 'st station', 'buhar kazanl'),
      "watt gucu, sok buhar (g/dk), surekli buhar cikisi (g/dk), taban tipi/kaplamasi, su haznesi kapasitesi (ml/L)", 4),
+    (('tost makine', 'toast'),
+     "watt gucu, ekmek kapasitesi, firin fonksiyonu, plaka materyali, cikarilabilir plakalar, "
+     "bulasik makinesinde yikanabilirlik, 180 derece izgara pozisyonu, yag toplama haznesi", 4),
 ]
 
 def _match_category_hints(context_text):
