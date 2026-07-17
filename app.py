@@ -27,6 +27,28 @@ try:
 except Exception:
     COOKWARE_RANGES = {}
 
+def find_cookware_size_table(name):
+    """Match a cookware filename-derived title against COOKWARE_RANGES, tolerating
+    extra words (e.g. 'Ingenio Unlimited On 6X 12 Parca Set' -> 'Unlimited') and
+    small typos (e.g. 'Recylcle' -> 'Recycle')."""
+    if not name:
+        return None
+    if name in COOKWARE_RANGES:
+        return COOKWARE_RANGES[name]
+    name_lower = name.strip().lower()
+    for k, v in COOKWARE_RANGES.items():
+        if k.strip().lower() == name_lower:
+            return v
+    candidates = [(k, v) for k, v in COOKWARE_RANGES.items() if k.strip().lower() in name_lower]
+    if candidates:
+        candidates.sort(key=lambda kv: -len(kv[0]))
+        return candidates[0][1]
+    import difflib
+    match = difflib.get_close_matches(name, list(COOKWARE_RANGES.keys()), n=1, cutoff=0.6)
+    if match:
+        return COOKWARE_RANGES[match[0]]
+    return None
+
 FONT_MAP = {}
 fonts_loaded = False
 
@@ -147,14 +169,7 @@ def parse_xlsm(xlsm_bytes, filename=None):
     if tech_bullets:
         product['benefits'] = product['benefits'][:6 - len(tech_bullets)] + tech_bullets
     if category == 'COOKWARE & BAKEWARE':
-        size_table = COOKWARE_RANGES.get(name)
-        if size_table is None:
-            name_lower = name.strip().lower()
-            for range_name, lines in COOKWARE_RANGES.items():
-                if range_name.strip().lower() == name_lower:
-                    size_table = lines
-                    break
-        product['size_table'] = size_table or []
+        product['size_table'] = find_cookware_size_table(name) or []
     product['images_b64'] = extract_images_b64(buf)
     return product
 
