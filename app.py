@@ -21,6 +21,12 @@ app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024
 app.config['MAX_FORM_MEMORY_SIZE'] = 200 * 1024 * 1024
 
+try:
+    with open(os.path.join(os.path.dirname(__file__), 'cookware_ranges.json'), encoding='utf-8') as _f:
+        COOKWARE_RANGES = json.load(_f)
+except Exception:
+    COOKWARE_RANGES = {}
+
 FONT_MAP = {}
 fonts_loaded = False
 
@@ -140,6 +146,15 @@ def parse_xlsm(xlsm_bytes, filename=None):
                                          category_context=category_context)
     if tech_bullets:
         product['benefits'] = product['benefits'][:6 - len(tech_bullets)] + tech_bullets
+    if category == 'COOKWARE & BAKEWARE':
+        size_table = COOKWARE_RANGES.get(name)
+        if size_table is None:
+            name_lower = name.strip().lower()
+            for range_name, lines in COOKWARE_RANGES.items():
+                if range_name.strip().lower() == name_lower:
+                    size_table = lines
+                    break
+        product['size_table'] = size_table or []
     product['images_b64'] = extract_images_b64(buf)
     return product
 
@@ -240,6 +255,25 @@ def draw_card(cv, x, y, cw, ch, product):
         cv.setFillColor(DARK); cv.setFont(F(), 6.5)
         cv.drawString(BUL_X, ty, text)
         ty -= 3.5*mm
+
+    # Size table (COOKWARE & BAKEWARE ranges only) — available sizes/variants
+    size_table = product.get('size_table')
+    if size_table and ty - 6*mm >= bottom_limit:
+        ty -= 1*mm
+        cv.setStrokeColor(colors.HexColor('#DEDEDE')); cv.setLineWidth(0.3)
+        cv.line(x, ty, x + cw, ty)
+        ty -= 3*mm
+        cv.setFillColor(DARK); cv.setFont(FB(), 6)
+        cv.drawString(x, ty, 'MEVCUT ÖLÇÜLER')
+        ty -= 3.3*mm
+        for line in size_table:
+            if ty - 3.2*mm < bottom_limit: break
+            text = str(line)
+            while tw(cv, text, F(), 6) > cw and len(text) > 5:
+                text = text[:-2] + '.'
+            cv.setFillColor(DGRAY); cv.setFont(F(), 6)
+            cv.drawString(x, ty, text)
+            ty -= 3.2*mm
 
 def build_pdf(products, output_path, category):
     # Group same-series products together so they appear side by side
