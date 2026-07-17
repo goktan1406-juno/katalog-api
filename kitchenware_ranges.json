@@ -3,174 +3,202 @@
     "sizes": [
       "16/18/20/22/24/26/28 cm"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Mix"
   },
   "Manuel Rondo": {
     "sizes": [
       "500/900 ml",
-      "Pastel Yeşil 500 ml"
+      "500 ml (Pastel Yeşil)"
     ],
     "colors": [
       "Siyah",
       "Pastel Yeşil",
       "Yeşil"
-    ]
+    ],
+    "range": "Manuel Rondo"
   },
   "Manuel Rondo Festive": {
     "sizes": [
       "Manuel Rondo Festive - 500ml"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Manuel Rondo"
   },
   "Jamie Oliver Chop & Shake Manuel Rondo": {
     "sizes": [
       "Jamie Oliver Chop & Shake Manuel Rondo - 500 ml"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Manuel Rondo"
   },
   "Pancake Express": {
     "sizes": [
       "Pancake Express - 900 ml"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Manuel Rondo"
   },
   "Manuel Rondo Buz Kırıcı Kit": {
     "sizes": [
       "Manuel Rondo Buz Kırıcı Kit - 900ml"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Manuel Rondo"
   },
   "Manuel Rondo Maxi Kit": {
     "sizes": [
       "Manuel Rondo Maxi Kit - 900ml"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Manuel Rondo"
   },
   "Katlanabilir Salata Kurutucu": {
     "sizes": [
       "Katlanabilir Salata Kurutucu - 4 L"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Salata Kurutucu"
   },
   "Ingenio Kesme Tahtası Seti": {
     "sizes": [
       "Ingenio 4'lü Kesme Tahtası Seti"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ingenio"
   },
   "Ingenio+ Kevgir ve Karıştırma Kabı seti": {
     "sizes": [
       "Ingenio+ Kevgir ve Karıştırma Kabı seti"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ingenio"
   },
   "Ingenio+ Çırpıcı": {
     "sizes": [
       "Ingenio+ Çırpıcı"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ingenio"
   },
   "Ingenio+ Kaşık": {
     "sizes": [
       "Ingenio+ Kaşık"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ingenio"
   },
   "Ingenio+ Kepçe": {
     "sizes": [
       "Ingenio+ Kepçe"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ingenio"
   },
   "Ingenio+ Silikon Spatula": {
     "sizes": [
       "Ingenio+ Silikon Spatula"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ingenio"
   },
   "Ingenio+ Pişirme Maşası": {
     "sizes": [
       "Ingenio+ Pişirme Maşası"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ingenio"
   },
   "Ingenio+ Delikli Spatula": {
     "sizes": [
       "Ingenio+ Delikli Spatula"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ingenio"
   },
   "Ingenio+ Silikon Hamur Spatulası": {
     "sizes": [
       "Ingenio+ Silikon Hamur Spatulası"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ingenio"
   },
   "Ingenio+ Soyucu": {
     "sizes": [
       "Ingenio+ Soyucu"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ingenio"
   },
   "Ingenio+ Sebze Soyucu": {
     "sizes": [
       "Ingenio+ Sebze Soyucu"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ingenio"
   },
   "Ingenio+ Rende": {
     "sizes": [
       "Ingenio+ Rende"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ingenio"
   },
   "Ingenio+ Mutfak Makası": {
     "sizes": [
       "Ingenio+ Mutfak Makası"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ingenio"
   },
   "Ingenio+ İkili Rende": {
     "sizes": [
       "Ingenio+ İkili Rende"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ingenio"
   },
   "Ingenio Ahşap Spatula": {
     "sizes": [
       "Ingenio Ahşap Spatula"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ingenio"
   },
   "Ingenio Ahşap Kaşık": {
     "sizes": [
       "Ingenio Ahşap Kaşık"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ingenio"
   },
   "Ingenio Ahşap Silikon Spatula": {
     "sizes": [
       "Ingenio Ahşap Silikon Spatula"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ingenio"
   },
   "Enjoy Servis ve Hazırlık Seti": {
     "sizes": [
       "Enjoy Servis ve Hazırlık Seti - 5 Parça"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Enjoy"
   },
   "Simplissima Servis ve Hazırlık Seti": {
     "sizes": [
       "Simplissima Servis ve Hazırlık Seti - 5 Parça"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Simplissima"
   },
   "Bienvenue Servis ve Hazırlık Seti": {
     "sizes": [
       "Bienvenue Servis ve Hazırlık Seti - 5 Parça"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Bienvenue"
   },
   "Colorfood Tırtıklı Soyma Bıçağı": {
     "sizes": [
@@ -178,7 +206,8 @@
     ],
     "colors": [
       "Sarı"
-    ]
+    ],
+    "range": "ColorFood"
   },
   "Colorfood Tırtıklı Çok Amaçlı Bıçak": {
     "sizes": [
@@ -186,7 +215,8 @@
     ],
     "colors": [
       "Turuncu"
-    ]
+    ],
+    "range": "ColorFood"
   },
   "Colorfood Soyma Bıçağı": {
     "sizes": [
@@ -194,187 +224,218 @@
     ],
     "colors": [
       "Siyah"
-    ]
+    ],
+    "range": "ColorFood"
   },
   "Comfort Bıçak Seti": {
     "sizes": [
       "2/3 Parça Set"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Comfort"
   },
   "Fresh Kitchen Soyma Bıçağı": {
     "sizes": [
       "Fresh Kitchen Soyma Bıçağı - 9cm"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Fresh Kitchen"
   },
   "Fresh Kitchen Et Bıçağı": {
     "sizes": [
       "Fresh Kitchen Et Bıçağı - 11cm"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Fresh Kitchen"
   },
   "Fresh Kitchen Çok Amaçlı Bıçak": {
     "sizes": [
       "Fresh Kitchen Çok Amaçlı Bıçak - 12cm"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Fresh Kitchen"
   },
   "Fresh Kitchen Santoku Bıçak": {
     "sizes": [
       "Fresh Kitchen Santoku Bıçak - 12cm"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Fresh Kitchen"
   },
   "Fresh Kitchen Şef Bıçağı": {
     "sizes": [
       "Fresh Kitchen Şef Bıçağı - 15cm"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Fresh Kitchen"
   },
   "Fresh Kitchen bir arada makas": {
     "sizes": [
       "Fresh Kitchen 3'ü bir arada makas"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Fresh Kitchen"
   },
   "Fresh Kitchen bıçak seti şef+santoku": {
     "sizes": [
       "Fresh Kitchen 2'li bıçak seti şef+santoku"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Fresh Kitchen"
   },
   "Fresh Kitchen set Çok Amaçlı+Santoku+Makas": {
     "sizes": [
       "Fresh Kitchen 3'lü set Çok Amaçlı+Santoku+Makas"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Fresh Kitchen"
   },
   "Fresh Kitchen Ahşap Standlı Bıçak Seti": {
     "sizes": [
       "Fresh Kitchen Ahşap Standlı Bıçak Seti 5'li"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Fresh Kitchen"
   },
   "Ice Force Soyma Bıçağı": {
     "sizes": [
       "Ice Force Soyma Bıçağı - 7cm"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ice Force"
   },
   "Ice Force Çok Amaçlı Bıçak": {
     "sizes": [
       "9/11 cm"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ice Force"
   },
   "Ice Force Slotlu Bıçak Bileyici": {
     "sizes": [
       "Ice Force 3 Slotlu Bıçak Bileyici"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ice Force"
   },
   "Ice Force Ekmek Bıçağı": {
     "sizes": [
       "Ice Force Ekmek Bıçağı - 20cm"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ice Force"
   },
   "Ice Force Şef Bıçak": {
     "sizes": [
       "15/20 cm"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ice Force"
   },
   "Ice Force Santoku Bıçak": {
     "sizes": [
       "Ice Force Santoku Bıçak - 18cm"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ice Force"
   },
   "Ice Force Bıçak Seti": {
     "sizes": [
       "Ice Force 3'lü Bıçak Seti"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ice Force"
   },
   "Ice Force Plastik Standlı Bıçak Seti": {
     "sizes": [
       "Ice Force Plastik Standlı Bıçak Seti 4'lü"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ice Force"
   },
   "Ice Force Ahşap Standlı Bıçak Seti": {
     "sizes": [
       "Ice Force Ahşap Standlı Bıçak Seti 5'li"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Ice Force"
   },
   "Ever Sharp Bileyicili Şef Bıçağı": {
     "sizes": [
       "Ever Sharp Bileyicili Şef Bıçağı - 16,5 cm"
     ],
-    "colors": []
+    "colors": [],
+    "range": "EverSharp"
   },
   "EverSharp Entegre Bileyicili Şef Bıçak": {
     "sizes": [
       "EverSharp Entegre Bileyicili Şef Bıçak 16,5cm"
     ],
-    "colors": []
+    "colors": [],
+    "range": "EverSharp"
   },
   "EverSharp Entegre Bileyicili Bıçak Seti ( Bıçak & Stand)": {
     "sizes": [
       "EverSharp 5'li Entegre Bileyicili Bıçak Seti - (5 Bıçak & Stand)"
     ],
-    "colors": []
+    "colors": [],
+    "range": "EverSharp"
   },
   "EverSharp Paslanmaz Çelik Entegre Bileyicili Bıçak Seti ( Bıçak Makas & Stand)": {
     "sizes": [
       "EverSharp Paslanmaz Çelik 6'lı Entegre Bileyicili Bıçak Seti - (5 Bıçak 1 Makas & Stand)"
     ],
-    "colors": []
+    "colors": [],
+    "range": "EverSharp"
   },
   "EverSharp Paslanmaz Çelik Entegre Bileyicili Şef Bıçak": {
     "sizes": [
       "EverSharp Paslanmaz Çelik Entegre Bileyicili Şef Bıçak 16,5cm"
     ],
-    "colors": []
+    "colors": [],
+    "range": "EverSharp"
   },
   "EverSharp Paslanmaz Çelik Entegre Bileyicili Bıçak Seti ( Bıçak & Stand)": {
     "sizes": [
       "EverSharp Paslanmaz Çelik 5'li Entegre Bileyicili Bıçak Seti - (5 Bıçak & Stand)"
     ],
-    "colors": []
+    "colors": [],
+    "range": "EverSharp"
   },
   "EverSharp Entegre Bileyicili Bıçak Seti ( Bıçak Makas & Stand)": {
     "sizes": [
       "EverSharp 3'li Entegre Bileyicili Bıçak Seti - (2 Bıçak 1 Makas & Stand)"
     ],
-    "colors": []
+    "colors": [],
+    "range": "EverSharp"
   },
   "Comfort Plastik Kesme Tahtası": {
     "sizes": [
       "Comfort Plastik Kesme Tahtası 39,6cm x 26,5cm"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Comfort"
   },
   "Fresh Kitchen Plastik Kesme Tahtası": {
     "sizes": [
       "Fresh Kitchen Plastik Kesme Tahtası 35,5cm x 25,5cm"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Fresh Kitchen"
   },
   "Comfort Ahşap Kesme Tahtası": {
     "sizes": [
       "Comfort Ahşap Kesme Tahtası 41cm x 24cm"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Comfort"
   },
   "Campo Termos Metal": {
     "sizes": [
       "Campo Termos Metal 1L"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Campo"
   },
   "Soft Grip Termos": {
     "sizes": [
@@ -382,7 +443,8 @@
     ],
     "colors": [
       "Siyah"
-    ]
+    ],
+    "range": "Soft Grip"
   },
   "Mambo Termos": {
     "sizes": [
@@ -393,7 +455,8 @@
       "Beyaz",
       "Parlak Siyah",
       "Siyah"
-    ]
+    ],
+    "range": "Mambo"
   },
   "Mambo Termos Parlak": {
     "sizes": [
@@ -401,25 +464,28 @@
     ],
     "colors": [
       "Kırmızı"
-    ]
+    ],
+    "range": "Mambo"
   },
   "Motiva Termos": {
     "sizes": [
-      "1 L Termos"
+      "1 L"
     ],
     "colors": [
       "Antrasit",
       "Bordo"
-    ]
+    ],
+    "range": "Motiva"
   },
   "Bludrop Termos Şişe": {
     "sizes": [
-      "0.5/0.7 L"
+      "0.5/0.7L"
     ],
     "colors": [
       "Pembe",
       "Yeşil"
-    ]
+    ],
+    "range": "Bludrop 0,7"
   },
   "Travel Mug Easy Twist Termos": {
     "sizes": [
@@ -428,7 +494,8 @@
     "colors": [
       "Yeşil",
       "Mavi"
-    ]
+    ],
+    "range": "Travel Mug Twist"
   },
   "Travel Mug Termos": {
     "sizes": [
@@ -438,13 +505,15 @@
       "Koyu Mavi",
       "Mavi",
       "Kırmızı"
-    ]
+    ],
+    "range": "Travel Mug"
   },
   "Travel Mug Termos Çelik": {
     "sizes": [
       "Travel Mug Termos Çelik 0.36L"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Travel Mug"
   },
   "Travel Mug Compact Termos": {
     "sizes": [
@@ -454,45 +523,52 @@
       "Siyah",
       "Mavi",
       "Yeşil"
-    ]
+    ],
+    "range": "Travel Mug Compact"
   },
   "MasterSeal Fresh Saklama Kabı Seti": {
     "sizes": [
       "3/5 Parça"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Masterseal Fresh"
   },
   "MasterSeal Fresh Gurme Saklama Kabı Seti": {
     "sizes": [
       "MasterSeal Fresh Gurme 5'li Saklama Kabı Seti - 0.85 L"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Masterseal Fresh"
   },
   "MasterSeal Color Saklama Kabı Seti": {
     "sizes": [
-      "4'lü Set"
+      "4 Parça Set"
     ],
     "colors": [
       "Mavi",
       "Pudra"
-    ]
+    ],
+    "range": "Masterseal Color"
   },
   "MasterSeal ToGo Plastik Saklama Kabı": {
     "sizes": [
       "MasterSeal ToGo Plastik Saklama Kabı - 1,2L"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Masterseal TO GO"
   },
   "MasterSeal ToGo Salata Kasesi": {
     "sizes": [
       "MasterSeal ToGo Salata Kasesi - 1L"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Masterseal TO GO"
   },
   "Tava Tencere Koruyucu": {
     "sizes": [
       "Tava Tencere Koruyucu 4 adet"
     ],
-    "colors": []
+    "colors": [],
+    "range": "Pan Protector"
   }
 }

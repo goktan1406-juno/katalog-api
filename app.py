@@ -149,9 +149,11 @@ def find_kitchenware_item(name):
         candidates.sort(key=lambda kv: -len(kv[0]))
         return candidates[0][1]
     import difflib
-    match = difflib.get_close_matches(base, list(KITCHENWARE_ITEMS.keys()), n=1, cutoff=0.6)
+    folded_keys = {k: _tr_fold(k) for k in KITCHENWARE_ITEMS}
+    match = difflib.get_close_matches(base_lower, list(folded_keys.values()), n=1, cutoff=0.6)
     if match:
-        return KITCHENWARE_ITEMS[match[0]]
+        orig_key = next(k for k, v in folded_keys.items() if v == match[0])
+        return KITCHENWARE_ITEMS[orig_key]
     return None
 
 FONT_MAP = {}
@@ -244,12 +246,22 @@ def parse_xlsm(xlsm_bytes, filename=None, force_category=None):
         return pairs
     category = force_category or get('PL') or get('Family L1') or 'GENEL'
     raw_name = get('Commercial Name')
+    kw_item = None
     if category == 'KITCHENWARE & DINNER':
         # Kitchenware names put the distinguishing part AFTER the first comma
-        # (e.g. "Ingenio+ Serisi, Rende") — trimming there like other categories
-        # would keep the generic range label and drop the actual product name.
-        name = simplify_storage_container_name(
+        # (e.g. "Ingenio+ Serisi, Rende, Sağlam, Isıya dayanıklı") — trimming there
+        # like other categories would keep the generic range label; instead pull
+        # out just the "<range> Serisi, <type>" part and drop the marketing tail.
+        name = simplify_ingenio_series_name(
             ensure_kitchenware_name_turkish(translate_name_to_turkish(raw_name)))
+        kw_item = find_kitchenware_item(name)
+        if re.search(r'(?i)saklama ka[bp]', name):
+            # Storage containers: title is just the range name (e.g. "MasterSeal
+            # ToGo"), no size table underneath.
+            if kw_item and kw_item.get('range'):
+                name = kw_item['range']
+            else:
+                name = simplify_storage_container_name(name)
     else:
         name = translate_name_to_turkish(trim_name_to_core(raw_name))
     range_field = get('Family L2') or get('Range name') or get('Range') or get('Series')
@@ -285,12 +297,7 @@ def parse_xlsm(xlsm_bytes, filename=None, force_category=None):
     if category == 'COOKWARE & BAKEWARE':
         product['size_table'] = find_cookware_size_table(name) or []
     elif category == 'KITCHENWARE & DINNER':
-        kw_item = find_kitchenware_item(name)
         product['size_colors'] = (kw_item or {}).get('colors', [])
-        if re.search(r'(?i)saklama kab', name):
-            # Storage containers: show the range's available capacities, same as
-            # cookware's size table (mugs/utensils just get the color reference).
-            product['size_table'] = (kw_item or {}).get('sizes', [])
     product['images_b64'] = extract_images_b64(buf)
     return product
 
@@ -655,10 +662,21 @@ def translate_name_to_turkish(name):
         return name
     return re.sub(r'vacuum cleaner', 'elektrikli süpürge', name, flags=re.IGNORECASE)
 
+def simplify_ingenio_series_name(name):
+    """Kitchenware Commercial Names put the generic range label first, then the
+    actual product type, then a marketing tail: 'Ingenio+ Serisi, Rende, Sağlam,
+    Isıya dayanıklı' -> 'Ingenio+ Rende'. Names without that "X Serisi, Type, ..."
+    shape pass through unchanged."""
+    m = re.match(r'(?i)^(.*?)\s+serisi\s*,\s*([^,]+)', name)
+    if not m:
+        return name
+    brand, product_type = m.group(1).strip(), m.group(2).strip()
+    return f'{brand} {product_type}'
+
 def simplify_storage_container_name(name):
     """Storage containers ('Saklama Kabı') don't need the piece-count/set
     descriptor in the title (e.g. '4'lü Saklama Kabı Seti' -> 'Saklama Kabı')."""
-    if not name or not re.search(r'(?i)saklama kab', name):
+    if not name or not re.search(r'(?i)saklama ka[bp]', name):
         return name
     t = name
     t = re.sub(r"(?i)\d+['’]?(li|lü|lı|lu)\b", ' ', t)
