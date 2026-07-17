@@ -119,6 +119,12 @@ def kitchenware_base_name(name):
     t = re.sub(r'\s+', ' ', t).strip(' -.,')
     return t
 
+def _tr_fold(s):
+    """Case-fold for matching purposes only, collapsing Turkish dotted/dotless I
+    (İ/I/ı/i) into one letter — source spreadsheets mix 'INGENIO' (ASCII I) with
+    correctly-Turkish 'İngenio' and plain str.lower() would keep them apart."""
+    return s.replace('İ', 'I').replace('ı', 'i').lower()
+
 def find_kitchenware_item(name):
     """Match a kitchenware product's base name against KITCHENWARE_ITEMS, tolerating
     extra/missing words and small typos, the same way find_cookware_size_table does."""
@@ -127,17 +133,18 @@ def find_kitchenware_item(name):
         return None
     if base in KITCHENWARE_ITEMS:
         return KITCHENWARE_ITEMS[base]
-    base_lower = base.strip().lower()
+    base_lower = _tr_fold(base.strip())
     for k, v in KITCHENWARE_ITEMS.items():
-        if k.strip().lower() == base_lower:
+        if _tr_fold(k.strip()) == base_lower:
             return v
-    candidates = [(k, v) for k, v in KITCHENWARE_ITEMS.items() if k.strip().lower() in base_lower]
+    candidates = [(k, v) for k, v in KITCHENWARE_ITEMS.items()
+                  if _tr_fold(k.strip()) in base_lower or base_lower in _tr_fold(k.strip())]
     if candidates:
         candidates.sort(key=lambda kv: -len(kv[0]))
         return candidates[0][1]
     base_nospace = base_lower.replace(' ', '')
     candidates = [(k, v) for k, v in KITCHENWARE_ITEMS.items()
-                  if k.strip().lower().replace(' ', '') in base_nospace]
+                  if _tr_fold(k.strip()).replace(' ', '') in base_nospace]
     if candidates:
         candidates.sort(key=lambda kv: -len(kv[0]))
         return candidates[0][1]
