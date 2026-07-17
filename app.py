@@ -33,6 +33,12 @@ _WORLD_NUMBER_ONE_RE = re.compile(
 def _is_world_number_one_claim(text):
     return bool(_WORLD_NUMBER_ONE_RE.search(text or ''))
 
+def _is_measurement_bullet(text):
+    """True if a bullet is just restating a dimension (e.g. '24 cm çap') rather
+    than a real feature — used for bakeware SKUs whose size is already dropped
+    from the name, so it shouldn't reappear as a bullet either."""
+    return bool(re.search(r'(?i)\d+([.,]\d+)?\s*(cm|mm)\b', text or ''))
+
 def strip_measurement_from_name(name):
     """Drop cm measurements from a product name (e.g. 'DeliBake Kelepçeli 24cm'
     -> 'DeliBake Kelepçeli') — used for bakeware items shown individually rather
@@ -290,12 +296,14 @@ def parse_xlsm(xlsm_bytes, filename=None, force_category=None):
     else:
         name = translate_name_to_turkish(trim_name_to_core(raw_name))
     range_field = get('Family L2') or get('Range name') or get('Range') or get('Series')
+    is_individual_bakeware = False
     if category == 'COOKWARE & BAKEWARE' and filename and not _is_generic_export_filename(filename):
         name = os.path.splitext(os.path.basename(filename))[0]
     elif category == 'COOKWARE & BAKEWARE':
         # Individual bakeware SKUs (e.g. cake molds) shown one-per-card, not as a
         # whole size range — the cm measurement in the name is redundant clutter.
         name = strip_measurement_from_name(name)
+        is_individual_bakeware = True
     claim = get('Key claim')
     if _is_world_number_one_claim(claim):
         claim = ''
@@ -314,7 +322,8 @@ def parse_xlsm(xlsm_bytes, filename=None, force_category=None):
         t = get(f'Benefit title {i}')
         d = get(f'Benefit detail {i}')
         if (t and t.lower() not in ('none','') and t not in seen
-                and not _is_world_number_one_claim(t) and not _is_world_number_one_claim(d)):
+                and not _is_world_number_one_claim(t) and not _is_world_number_one_claim(d)
+                and not (is_individual_bakeware and _is_measurement_bullet(t))):
             seen.add(t); product['benefits'].append((t,d))
     if product['benefits']:
         product['benefits'] = ensure_benefits_turkish(product['benefits'])
@@ -325,6 +334,8 @@ def parse_xlsm(xlsm_bytes, filename=None, force_category=None):
     category_context = f"{product['category']} {get('Family L1')} {product['series']} {product['ref']}"
     tech_bullets = extract_tech_bullets(get_technical_characteristics(), product_name=name,
                                          category_context=category_context)
+    if is_individual_bakeware:
+        tech_bullets = [(t, d) for t, d in tech_bullets if not _is_measurement_bullet(t)]
     if tech_bullets:
         product['benefits'] = product['benefits'][:6 - len(tech_bullets)] + tech_bullets
     if category == 'COOKWARE & BAKEWARE':
