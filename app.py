@@ -202,7 +202,7 @@ def wrap(cv, text, font, size, max_w):
     if line: lines.append(line)
     return lines
 
-def parse_xlsm(xlsm_bytes, filename=None):
+def parse_xlsm(xlsm_bytes, filename=None, force_category=None):
     buf = BytesIO(xlsm_bytes)
     wb  = load_workbook(buf, data_only=True)
     rt  = wb['RANGE TABLE']
@@ -242,13 +242,13 @@ def parse_xlsm(xlsm_bytes, filename=None):
                     v = str(int(v))
                 pairs[k] = str(v).strip()
         return pairs
-    category = get('PL') or get('Family L1') or 'GENEL'
+    category = force_category or get('PL') or get('Family L1') or 'GENEL'
     raw_name = get('Commercial Name')
     if category == 'KITCHENWARE & DINNER':
         # Kitchenware names put the distinguishing part AFTER the first comma
         # (e.g. "Ingenio+ Serisi, Rende") — trimming there like other categories
         # would keep the generic range label and drop the actual product name.
-        name = translate_name_to_turkish(raw_name)
+        name = simplify_storage_container_name(translate_name_to_turkish(raw_name))
     else:
         name = translate_name_to_turkish(trim_name_to_core(raw_name))
     range_field = get('Family L2') or get('Range name') or get('Range') or get('Series')
@@ -650,6 +650,18 @@ def translate_name_to_turkish(name):
         return name
     return re.sub(r'vacuum cleaner', 'elektrikli süpürge', name, flags=re.IGNORECASE)
 
+def simplify_storage_container_name(name):
+    """Storage containers ('Saklama Kabı') don't need the piece-count/set
+    descriptor in the title (e.g. '4'lü Saklama Kabı Seti' -> 'Saklama Kabı')."""
+    if not name or not re.search(r'(?i)saklama kab', name):
+        return name
+    t = name
+    t = re.sub(r"(?i)\d+['’]?(li|lü|lı|lu)\b", ' ', t)
+    t = re.sub(r'(?i)\d+\s*par[çc]a(l[ıi])?\b', ' ', t)
+    t = re.sub(r'(?i)\bseti?\b', ' ', t)
+    t = re.sub(r'\s+', ' ', t).strip(' -,')
+    return t
+
 # ─── Endpoints ─────────────────────────────────────────────────────────────────
 
 @app.route('/health', methods=['GET'])
@@ -715,7 +727,9 @@ def add_product():
                 pass
 
         xlsm_bytes = request.files['file'].read()
-        product    = parse_xlsm(xlsm_bytes, filename=request.files['file'].filename)
+        force_category = request.form.get('force_category') or None
+        product    = parse_xlsm(xlsm_bytes, filename=request.files['file'].filename,
+                                 force_category=force_category)
         category   = product['category'] or 'GENEL'
 
         CATALOG_STATE[category][product['ref']] = product
