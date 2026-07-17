@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-import base64, zipfile, os, tempfile, json
+import base64, zipfile, os, tempfile, json, re
 from io import BytesIO
 from collections import defaultdict
 
@@ -109,7 +109,7 @@ def parse_xlsm(xlsm_bytes):
                     v = str(int(v))
                 pairs[k] = str(v).strip()
         return pairs
-    name = get('Commercial Name')
+    name = translate_name_to_turkish(trim_name_to_core(get('Commercial Name')))
     product = {
         'ref':        get('Product Reference'),
         'product_id': get_raw('Product Id'),
@@ -130,7 +130,7 @@ def parse_xlsm(xlsm_bytes):
         highlights_raw = get('Benefits Highlights') or get('Short description detail')
         if highlights_raw:
             product['benefits'] = summarize_highlights(highlights_raw)
-    category_context = f"{product['category']} {product['series']} {product['ref']}"
+    category_context = f"{product['category']} {get('Family L1')} {product['series']} {product['ref']}"
     tech_bullets = extract_tech_bullets(get_technical_characteristics(), product_name=name,
                                          category_context=category_context)
     if tech_bullets:
@@ -363,6 +363,24 @@ def extract_tech_bullets(tech_pairs, product_name='', category_context='', count
     except Exception as e:
         print(f"Tech bullets error: {e}")
         return []
+
+
+def trim_name_to_core(name):
+    """Cut a Commercial Name down to just the core model name, dropping the
+    trailing marketing tagline (e.g. 'X-Trem Cyclonic Effitech®, Torbasız
+    Elektrikli Süpürge, Ultra Verimli' -> 'X-Trem Cyclonic Effitech®')."""
+    if not name:
+        return name
+    cut_points = [i for i in (name.find(','), name.find('–'), name.find('—')) if i != -1]
+    return (name[:min(cut_points)] if cut_points else name).strip()
+
+
+def translate_name_to_turkish(name):
+    """Swap known English product-type phrases for their Turkish equivalent;
+    leave the rest of the name (brand, model, English or not) untouched."""
+    if not name:
+        return name
+    return re.sub(r'vacuum cleaner', 'elektrikli süpürge', name, flags=re.IGNORECASE)
 
 # ─── Endpoints ─────────────────────────────────────────────────────────────────
 
