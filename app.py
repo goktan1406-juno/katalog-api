@@ -278,24 +278,10 @@ def parse_xlsm(xlsm_bytes, filename=None, force_category=None):
         return pairs
     category = force_category or get('PL') or get('Family L1') or 'GENEL'
     raw_name = get('Commercial Name')
-    kw_item = None
-    if category == 'KITCHENWARE & DINNER':
-        # Kitchenware names put the distinguishing part AFTER the first comma
-        # (e.g. "Ingenio+ Serisi, Rende, Sağlam, Isıya dayanıklı") — trimming there
-        # like other categories would keep the generic range label; instead pull
-        # out just the "<range> Serisi, <type>" part and drop the marketing tail.
-        name = simplify_ingenio_series_name(
-            ensure_kitchenware_name_turkish(translate_name_to_turkish(raw_name)))
-        kw_item = find_kitchenware_item(name)
-        if re.search(r'(?i)saklama ka[bp]', name):
-            # Storage containers: title is just the range name (e.g. "MasterSeal
-            # ToGo"), no size table underneath.
-            if kw_item and kw_item.get('range'):
-                name = kw_item['range']
-            else:
-                name = simplify_storage_container_name(name)
-    else:
-        name = translate_name_to_turkish(trim_name_to_core(raw_name))
+    # KITCHENWARE & DINNER uses the same name handling as every other category now
+    # (plain trim + translate, category-based tech-spec hints) rather than its own
+    # range/size-table/color-circle machinery.
+    name = translate_name_to_turkish(trim_name_to_core(raw_name))
     range_field = get('Family L2') or get('Range name') or get('Range') or get('Series')
     is_individual_bakeware = False
     if category == 'COOKWARE & BAKEWARE' and filename and not _is_generic_export_filename(filename):
@@ -341,8 +327,6 @@ def parse_xlsm(xlsm_bytes, filename=None, force_category=None):
         product['benefits'] = product['benefits'][:6 - len(tech_bullets)] + tech_bullets
     if category == 'COOKWARE & BAKEWARE':
         product['size_table'] = find_cookware_size_table(name) or []
-    elif category == 'KITCHENWARE & DINNER':
-        product['size_colors'] = (kw_item or {}).get('colors', [])
     product['images_b64'] = extract_images_b64(buf)
     return product
 
