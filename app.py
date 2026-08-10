@@ -27,6 +27,12 @@ try:
 except Exception:
     COOKWARE_RANGES = {}
 
+try:
+    with open(os.path.join(os.path.dirname(__file__), 'category_order.json'), encoding='utf-8') as _f:
+        CATEGORY_ORDER = json.load(_f)
+except Exception:
+    CATEGORY_ORDER = {}
+
 _WORLD_NUMBER_ONE_RE = re.compile(
     r'(?i)d[üu]nyan[ıi]n\s*[#]?\s*(bir|1)[\.\s]*numara'
     r'|world.?s?\s*[#]?\s*(number\s*(one|1)|no\.?\s*1|#\s*1)')
@@ -503,8 +509,18 @@ def draw_card(cv, x, y, cw, ch, product):
         ty -= 3.2*mm
 
 def build_pdf(products, output_path, category):
-    # Group same-series products together so they appear side by side
-    products = sorted(products, key=lambda p: (p.get('series', ''), p.get('name', '')))
+    # If a CMMF display order was supplied for this category, use it; products
+    # not in the list fall to the end, grouped by series/name as before.
+    cmmf_order = CATEGORY_ORDER.get(category)
+    if cmmf_order:
+        order_index = {code: i for i, code in enumerate(cmmf_order)}
+        products = sorted(products, key=lambda p: (
+            order_index.get(str(p.get('product_id', '')), len(cmmf_order)),
+            p.get('series', ''), p.get('name', ''),
+        ))
+    else:
+        # Group same-series products together so they appear side by side
+        products = sorted(products, key=lambda p: (p.get('series', ''), p.get('name', '')))
 
     load_fonts()
     cv = canvas.Canvas(output_path, pagesize=A4)
