@@ -54,6 +54,20 @@ def normalize_name_casing(name):
         return w[0] + w[1:].translate(_TR_MIDWORD_LOWER).lower()
     return re.sub(r'[^\s\-/]+', cap_word, name)
 
+_PRODUCT_CODE_RE = re.compile(r'(?i)\b[A-Za-z]{2,4}\d{3,5}[A-Za-z0-9]{0,3}(?:\+\d+)*\b')
+_NAME_WATTAGE_RE = re.compile(r'(?i)\b\d+\s*(w|watt)\b\.?')
+
+def strip_product_code_from_name(name):
+    """Drop internal model/reference codes from the display name (e.g. 'Toast
+    Expert Gc191' -> 'Toast Expert', 'Fv5695 3000 Watt ...' -> '... ütü') — the
+    code is redundant clutter since Product ID is already shown on the card."""
+    if not name:
+        return name
+    t = _NAME_WATTAGE_RE.sub('', name)
+    t = _PRODUCT_CODE_RE.sub('', t)
+    t = re.sub(r'\s+', ' ', t).strip(' -,')
+    return t
+
 def _is_measurement_bullet(text):
     """True if a bullet is just restating a dimension (e.g. '24 cm çap') rather
     than a real feature — used for bakeware SKUs whose size is already dropped
@@ -301,7 +315,7 @@ def parse_xlsm(xlsm_bytes, filename=None, force_category=None):
     # KITCHENWARE & DINNER uses the same name handling as every other category now
     # (plain trim + translate, category-based tech-spec hints) rather than its own
     # range/size-table/color-circle machinery.
-    name = translate_name_to_turkish(trim_name_to_core(raw_name))
+    name = strip_product_code_from_name(translate_name_to_turkish(trim_name_to_core(raw_name)))
     range_field = get('Family L2') or get('Range name') or get('Range') or get('Series')
     is_individual_bakeware = False
     if category == 'COOKWARE & BAKEWARE' and filename and not _is_generic_export_filename(filename):
