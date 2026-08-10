@@ -34,6 +34,26 @@ _WORLD_NUMBER_ONE_RE = re.compile(
 def _is_world_number_one_claim(text):
     return bool(_WORLD_NUMBER_ONE_RE.search(text or ''))
 
+_TR_MIDWORD_LOWER = str.maketrans({'İ': 'i'})
+
+def normalize_name_casing(name):
+    """Source PIM exports sometimes give the whole name in ALL CAPS (e.g.
+    'TEFAL MY TEA') while others are already properly cased (e.g. 'MasterSeal
+    ToGo') — normalize only the all-caps ones to Title Case so every card uses
+    the same convention, without flattening names that are already mixed-case.
+    Plain ASCII 'I' lowers to 'i' (English-style) rather than Turkish dotless
+    'ı' — names mix Turkish and international brand words (e.g. 'SILENCE',
+    'ANIMAL') and guessing 'ı' breaks the international ones more visibly."""
+    if not name:
+        return name
+    letters = [c for c in name if c.isalpha()]
+    if not letters or not all(c.isupper() for c in letters):
+        return name
+    def cap_word(m):
+        w = m.group(0)
+        return w[0] + w[1:].translate(_TR_MIDWORD_LOWER).lower()
+    return re.sub(r'[^\s\-/]+', cap_word, name)
+
 def _is_measurement_bullet(text):
     """True if a bullet is just restating a dimension (e.g. '24 cm çap') rather
     than a real feature — used for bakeware SKUs whose size is already dropped
@@ -291,6 +311,7 @@ def parse_xlsm(xlsm_bytes, filename=None, force_category=None):
         # whole size range — the cm measurement in the name is redundant clutter.
         name = strip_measurement_from_name(name)
         is_individual_bakeware = True
+    name = normalize_name_casing(name)
     claim = get('Key claim')
     if _is_world_number_one_claim(claim):
         claim = ''
@@ -324,7 +345,11 @@ def parse_xlsm(xlsm_bytes, filename=None, force_category=None):
     if is_individual_bakeware:
         tech_bullets = [(t, d) for t, d in tech_bullets if not _is_measurement_bullet(t)]
     if tech_bullets:
-        product['benefits'] = product['benefits'][:6 - len(tech_bullets)] + tech_bullets
+        # Priority spec bullets (e.g. wattage, steam pressure) go first and at a
+        # fixed count per product type, so the same spec lands on the same line
+        # across every card in a category instead of wherever raw benefits leave
+        # room for it.
+        product['benefits'] = tech_bullets + product['benefits'][:6 - len(tech_bullets)]
     if category == 'COOKWARE & BAKEWARE':
         product['size_table'] = find_cookware_size_table(name) or []
     product['images_b64'] = extract_images_b64(buf)
