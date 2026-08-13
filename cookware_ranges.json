@@ -326,5 +326,23 @@
     "28 cm Wok Tava",
     "28 cm Krep Tava",
     "28 cm Kısa Tencere"
+  ],
+  "Tit 6X Excellence": [
+    "22/24/26/28/30/32 cm Tava",
+    "24/28 cm Kısa Tencere",
+    "28 cm Wok Tava",
+    "25 cm Krep Tava",
+    "26 cm Şef Tavası"
+  ],
+  "Tit 6X Mix": [
+    "22/24/26/28 cm Tava",
+    "16/18/20/24 cm Kısa Tencere",
+    "26 cm Wok Tava"
+  ],
+  "Tit 6X UnlimitedOne": [
+    "20/24/28/32 cm Tava",
+    "28 cm Wok Tava",
+    "28 cm Krep Tava",
+    "28 cm Kısa Tencere"
   ]
 }
