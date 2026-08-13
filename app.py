@@ -509,13 +509,16 @@ def draw_card(cv, x, y, cw, ch, product):
         ty -= 3.2*mm
 
 def build_pdf(products, output_path, category):
-    # If a CMMF display order was supplied for this category, use it; products
-    # not in the list fall to the end, grouped by series/name as before.
-    cmmf_order = CATEGORY_ORDER.get(category)
-    if cmmf_order:
-        order_index = {code: i for i, code in enumerate(cmmf_order)}
+    # If a display order was supplied for this category, use it — keyed by
+    # either CMMF (product_id) or, for categories ordered by name instead,
+    # the product name itself. Products not in the list fall to the end,
+    # grouped by series/name as before.
+    order = CATEGORY_ORDER.get(category)
+    if order:
+        order_index = {code: i for i, code in enumerate(order)}
         products = sorted(products, key=lambda p: (
-            order_index.get(str(p.get('product_id', '')), len(cmmf_order)),
+            order_index.get(str(p.get('product_id', '')),
+                             order_index.get(p.get('name', ''), len(order))),
             p.get('series', ''), p.get('name', ''),
         ))
     else:
