@@ -33,17 +33,15 @@
     "Küçük Set 3 Parça"
   ],
   "Expertise": [
-    "Tava 20/24/28 cm",
-    "Wok Tava 28 cm",
-    "Krep Tava 25 cm",
-    "Kısa Tencere 26 cm",
-    "Sahan 20 cm",
-    "Büyük Set 12 Parça"
+    "20/24/28 cm Tava",
+    "28 cm Wok Tava",
+    "25 cm Krep Tava",
+    "24 cm Kısa Tencere",
+    "26 cm Derin Tencere",
+    "20 cm Sahan"
   ],
   "Expertise+": [
-    "20/24/26/28/30 cm Tava",
-    "25 cm Krep Tava",
-    "20/26 cm Tava Set"
+    "20/24/26/28/30 cm Tava"
   ],
   "Renew Artus": [
     "24/28/30 cm Tava",
@@ -111,10 +109,9 @@
     "24 cm Kısa Tencere"
   ],
   "Mix Renew": [
-    "Tekli Tutma Sapı",
-    "Tava 24/26/28 cm",
-    "Sos Tavası 16/20 cm",
-    "Derin Tava 24 cm"
+    "24/26/28 cm Tava",
+    "16/20 cm Sos Tavası",
+    "24 cm Derin Tencere"
   ],
   "Perfect Cook": [
     "4 Parça Set",
@@ -277,5 +274,59 @@
     "28 cm Tava",
     "28 cm Wok Tava",
     "25 cm Krep Tava"
+  ],
+  "Explore 9X": [
+    "24/28/30 cm Tava",
+    "28 cm Krep Tava",
+    "28 cm Wok Tava",
+    "28 cm Kısa Tencere"
+  ],
+  "Experience 9X": [
+    "20/24/26/28/30/32 cm Tava",
+    "24 cm Şef Tencere",
+    "25 cm Krep Tava",
+    "28 cm Wok Tava"
+  ],
+  "Tit 1X Simple Cook DIF": [
+    "20/24/26/28/30 cm Tava",
+    "28 cm Wok Tava",
+    "12 cm Sos Tavası",
+    "25 cm Krep Tava"
+  ],
+  "Tit 1X Simple Clean DIF": [
+    "20/24/26/28/30/32 cm Tava",
+    "25 cm Krep Tava",
+    "28 cm Wok Tava",
+    "12 cm Sos Tavası",
+    "24/28 cm Kısa Tencere",
+    "20/24 cm Derin Tencere"
+  ],
+  "Ingenio Mix 1X": [
+    "26 cm Tava"
+  ],
+  "Tit 2X XL Force": [
+    "20/32 cm Tava"
+  ],
+  "Recycle Ceramic": [
+    "20/24/28/30 cm Tava",
+    "28 cm Wok Tava",
+    "16 cm Sos Tenceresi",
+    "24 cm Derin Tencere"
+  ],
+  "Halo Okaliptus": [
+    "20/24/28/30 cm Tava",
+    "25 cm Krep Tava",
+    "26 cm Wok Tava",
+    "24 cm Derin Tencere"
+  ],
+  "Harmony Okaliptus": [
+    "20/24/28 cm Tava",
+    "25 cm Krep Tava",
+    "18 cm Sos Tavası"
+  ],
+  "Renew Artus Ceramic": [
+    "24/28/30 cm Tava",
+    "28 cm Wok Tava",
+    "24 cm Derin Tencere"
   ]
 }
