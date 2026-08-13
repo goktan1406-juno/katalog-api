@@ -351,7 +351,7 @@ def parse_xlsm(xlsm_bytes, filename=None, force_category=None):
         d = get(f'Benefit detail {i}')
         if (t and t.lower() not in ('none','') and t not in seen
                 and not _is_world_number_one_claim(t) and not _is_world_number_one_claim(d)
-                and not (is_individual_bakeware and _is_measurement_bullet(t))):
+                and not (category == 'COOKWARE & BAKEWARE' and _is_measurement_bullet(t))):
             seen.add(t); product['benefits'].append((t,d))
     if product['benefits']:
         product['benefits'] = ensure_benefits_turkish(product['benefits'])
@@ -362,7 +362,7 @@ def parse_xlsm(xlsm_bytes, filename=None, force_category=None):
     category_context = f"{product['category']} {get('Family L1')} {product['series']} {product['ref']}"
     tech_bullets = extract_tech_bullets(get_technical_characteristics(), product_name=name,
                                          category_context=category_context)
-    if is_individual_bakeware:
+    if category == 'COOKWARE & BAKEWARE':
         tech_bullets = [(t, d) for t, d in tech_bullets if not _is_measurement_bullet(t)]
     if tech_bullets:
         # Priority spec bullets (e.g. wattage, steam pressure) go first and at a
