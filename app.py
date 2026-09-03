@@ -486,7 +486,10 @@ def draw_card(cv, x, y, cw, ch, product):
     BUL_W = cw - 4.5*mm
     bottom_limit = y - ch + 3*mm
 
-    for title, _ in product.get('benefits', [])[:6]:
+    # Cap bullets lower when there's a size table to show — otherwise 6 bullets
+    # routinely fill the card and leave no room for it at all.
+    max_bullets = 4 if product.get('size_table') else 6
+    for title, _ in product.get('benefits', [])[:max_bullets]:
         if ty - 3.5*mm < bottom_limit: break
         text = str(title)
         while tw(cv, text, F(), 6.5) > BUL_W and len(text) > 5:
@@ -497,9 +500,12 @@ def draw_card(cv, x, y, cw, ch, product):
         cv.drawString(BUL_X, ty, text)
         ty -= 3.5*mm
 
-    # Size table (COOKWARE & BAKEWARE ranges only) — available sizes/variants
+    # Size table (COOKWARE & BAKEWARE ranges only) — available sizes/variants.
+    # Needs room for the separator + heading (1+3+3.3mm) *plus* at least one
+    # line (3.2mm) — reserving only enough for the heading let it print with
+    # zero lines under it on cards already full of bullets.
     size_table = product.get('size_table')
-    if size_table and ty - 6*mm >= bottom_limit:
+    if size_table and ty - 10.5*mm >= bottom_limit:
         ty -= 1*mm
         cv.setStrokeColor(colors.HexColor('#DEDEDE')); cv.setLineWidth(0.3)
         cv.line(x, ty, x + cw, ty)
