@@ -1,63 +1,85 @@
 {
   "2100141086": [
-    "16.5 cm Santoku Bıçak",
-    "20 cm Ekmek Bıçağı",
-    "20 cm Şef Bıçağı",
-    "12 cm Çok Amaçlı Bıçak",
-    "9 cm Soyma Bıçağı",
+    "Santoku Bıçağı - 16.5 cm",
+    "Ekmek Bıçağı - 20 cm",
+    "Şef Bıçağı - 20 cm",
+    "Çok Amaçlı Bıçak - 12 cm",
+    "Soyma Bıçağı - 9 cm",
     "Bıçak Bloğu"
   ],
   "2100139800": [
-    "20 cm Şef Bıçağı",
-    "20 cm Ekmek Bıçağı",
-    "16.5 cm Santoku Bıçak",
-    "12 cm Çok Amaçlı Bıçak",
-    "9 cm Soyma Bıçağı",
-    "Bıçak Bloğu"
+    "Entegre bileme sistemine sahip bıçak bloğu",
+    "20 cm Şef bıçağı",
+    "20 cm Ekmek bıçağı",
+    "16,5 cm Santoku bıçağı",
+    "12 cm Çok amaçlı bıçak",
+    "9 cm Soyma bıçağı"
   ],
   "2100110589": [
-    "20 cm Ekmek Bıçağı",
-    "20 cm Şef Bıçağı",
-    "18 cm Santoku Bıçak",
-    "11 cm Çok Amaçlı Bıçak",
-    "9 cm Soyma Bıçağı"
+    "ekmek bıçağı 20cm",
+    "şef bıçak 20cm",
+    "santoku bıçak 18cm",
+    "çok amaçlı bıçak 11cm",
+    "soyma bıçağı 9cm"
   ],
   "2100128956": [
-    "20 cm Şef Bıçağı",
-    "11 cm Çok Amaçlı Bıçak",
-    "9 cm Soyma Bıçağı",
-    "Bıçak Bloğu"
+    "Evrensel ahşap bıçak bloğu (Ø 12,5 x 22 cm)",
+    "Şef bıçağı (20 cm)",
+    "Çok amaçlı bıçak (11 cm)",
+    "Soyma bıçağı (9 cm)"
   ],
   "2100130351": [
-    "9 cm Soyma Bıçağı",
-    "12 cm Çok Amaçlı Bıçak",
-    "15 cm Şef Bıçağı",
-    "20 cm Dilimleme Bıçağı",
-    "20 cm Ekmek Bıçağı"
+    "Soyma bıçağı (9 cm)",
+    "Çok amaçlı bıçak (12 cm)",
+    "Şef bıçağı (15 cm)",
+    "Dilimleme bıçağı (20 cm)",
+    "Ekmek bıçağı (20 cm)",
+    "5 yuvadan oluşan ahşap saklama bloğu"
   ],
   "2100141087": [
     "20 cm Şef Bıçağı",
     "20 cm Ekmek Bıçağı",
-    "16.5 cm Santoku Bıçak",
-    "12 cm Çok Amaçlı Bıçak",
-    "9 cm Soyma Bıçağı",
-    "Bıçak Bloğu"
+    "16.5 cm Santoku Bıçağı",
+    "12 cm Universal Bıçak",
+    "9 cm Soyma Bıçağı"
   ],
   "2100146473": [
-    "16.5 cm Şef Bıçağı",
-    "12 cm Çok Amaçlı Bıçak",
-    "Bıçak Bloğu",
+    "Şef bıçağı (16,5 cm)",
+    "Çok amaçlı bıçak (12 cm)",
     "Makas"
   ],
   "3100517990": [
-    "0.45/0.6/0.7/0.8/0.85/0.9/1.1/1.3/2/3 L Saklama Kabı"
+    "0.6L Yuvarlak Koyu Mavi",
+    "0.9L Yuvarlak Koyu Mavi",
+    "0.8L Kare Koyu Mavi",
+    "0.45L Dikdörtgen Koyu Mavi",
+    "0.7L Dikdörtgen Koyu Mavi",
+    "0.85L Dikdörtgen Koyu Mavi",
+    "1.1L Dikdörtgen Koyu Mavi",
+    "1.3L Dikdörtgen Koyu Mavi",
+    "2L Dikdörtgen Koyu Mavi",
+    "3L Dikdörtgen Koyu Mavi",
+    "3 Parça 0.45L Dikdörtgen Koyu Mavi"
   ],
   "3100518274": [
-    "0.55/0.6/1/1.2 L",
-    "1.2 L Plastik Saklama Kabı"
+    "1L Salata Kasesi",
+    "1.2L Lunchbox",
+    "1.2L Brunchbox",
+    "1.2L Plastik Saklama Kabı",
+    "1L Salata",
+    "0.55L Çıkabilir 2 Gözlü",
+    "0.6L 2 Gözlü"
   ],
   "3100517989": [
-    "0.45/0.6/0.7/0.8/0.85/0.9/1.1/1.3/2 L"
+    "0.45L Saklama Kabi",
+    "0.6L Saklama Kabi",
+    "0.7L Saklama Kabi",
+    "0.8L Saklama Kabi",
+    "0.85L Saklama Kabi",
+    "0.9L Saklama Kabi",
+    "1.1L Saklama Kabi",
+    "1.3L Saklama Kabi",
+    "2L Saklama Kabi"
   ],
   "2100096216": [
     "Kepçe",
@@ -66,6 +88,12 @@
     "Uzun Spatula"
   ],
   "2100127837": [
-    "16/18/20/22/24/26/28 cm Cam Kapak"
+    "16 cm Cam Kapak",
+    "18 cm Cam Kapak",
+    "20 cm Cam Kapak",
+    "22 cm Cam Kapak",
+    "24 cm Cam Kapak",
+    "26 cm Cam Kapak",
+    "28 cm Cam Kapak"
   ]
 }
