@@ -28,6 +28,12 @@ except Exception:
     COOKWARE_RANGES = {}
 
 try:
+    with open(os.path.join(os.path.dirname(__file__), 'kitchenware_set_sizes.json'), encoding='utf-8') as _f:
+        KITCHENWARE_SET_SIZES = json.load(_f)
+except Exception:
+    KITCHENWARE_SET_SIZES = {}
+
+try:
     with open(os.path.join(os.path.dirname(__file__), 'category_order.json'), encoding='utf-8') as _f:
         CATEGORY_ORDER = json.load(_f)
 except Exception:
@@ -383,6 +389,13 @@ def parse_xlsm(xlsm_bytes, filename=None, force_category=None):
         product['benefits'] = tech_bullets + product['benefits'][:6 - len(tech_bullets)]
     if category == 'COOKWARE & BAKEWARE':
         product['size_table'] = find_cookware_size_table(name) or []
+    elif category == 'KITCHENWARE & DINNER':
+        # Scoped, additive lookup for SKU-based sets (knife blocks, storage
+        # container families) — only fires when the exact product ID is known;
+        # doesn't affect any other kitchenware product.
+        kw_sizes = KITCHENWARE_SET_SIZES.get(get_raw('Product Id'))
+        if kw_sizes:
+            product['size_table'] = kw_sizes
     product['images_b64'] = extract_images_b64(buf)
     return product
 

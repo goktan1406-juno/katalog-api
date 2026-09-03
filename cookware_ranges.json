@@ -52,8 +52,8 @@
   "Recycle": [
     "20/24/28/30 cm Tava",
     "28 cm Wok Tava",
-    "16 cm Sos Tenceresi",
-    "24 cm Derin Tencere"
+    "24 cm Derin Tencere",
+    "16 cm Sos Tenceresi"
   ],
   "Halo": [
     "20/24/28/30 cm Tava",
@@ -110,8 +110,7 @@
   ],
   "Mix Renew": [
     "24/26/28 cm Tava",
-    "16/20 cm Sos Tavası",
-    "24 cm Derin Tencere"
+    "16/20 cm Sos Tavası"
   ],
   "Perfect Cook": [
     "4 Parça Set",
@@ -344,5 +343,124 @@
     "28 cm Wok Tava",
     "28 cm Krep Tava",
     "28 cm Kısa Tencere"
+  ],
+  "Ingenio Excellence Tit 6X Büyük Set 12parça": [
+    "26/28 cm Tava",
+    "28 cm Wok Tava",
+    "24 cm Kısa Tencere",
+    "22 cm Derin Tencere"
+  ],
+  "Ingenio Ceramic Renew Büyük Set 11 Parça IND": [
+    "22/26 cm Tava",
+    "26 cm Wok Tava",
+    "24 cm Kısa Tencere",
+    "20 cm Derin Tencere"
+  ],
+  "Ingenio Preference Tit 6X Büyük Set 12parça": [
+    "22/26 cm Tava",
+    "26 cm Wok Tava",
+    "24 cm Kısa Tencere",
+    "22 cm Derin Tencere"
+  ],
+  "Ingenio Exception Tit 6X Büyük Set 12parça": [
+    "26/28 cm Tava",
+    "28 cm Wok Tava",
+    "24 cm Kısa Tencere",
+    "22 cm Derin Tencere"
+  ],
+  "Ingenio Excellence Fusion Core 9X Büyük Set 14 parça": [
+    "24/28 cm Tava",
+    "26 cm Wok Tava",
+    "24 cm Kısa Tencere",
+    "16/20 cm Sos Tenceresi"
+  ],
+  "Ingenio Simple Cook Tit 1X Büyük Set 12parça": [
+    "22/26 cm Tava",
+    "26 cm Wok Tava",
+    "24 cm Kısa Tencere",
+    "20 cm Derin Tencere"
+  ],
+  "Ingenio XL Intense Tit 2X Büyük Set 12parça": [
+    "24/28 cm Tava",
+    "28 cm Wok Tava",
+    "24 cm Kısa Tencere",
+    "20 cm Derin Tencere"
+  ],
+  "Ingenio XL Intense Tit 2X Maxi Set 19parça": [
+    "22/26/28 cm Tava",
+    "28 cm Wok Tava",
+    "24 cm Kısa Tencere",
+    "16/22 cm Derin Tencere"
+  ],
+  "Ingenio Ultimate Tit 3X Büyük Set 12parça": [
+    "26/28 cm Tava",
+    "26 cm Wok Tava",
+    "24 cm Kısa Tencere",
+    "20 cm Derin Tencere"
+  ],
+  "Ingenio XL Force Tit 2X Maxi Set 19parça": [
+    "22/26/28 cm Tava",
+    "28 cm Wok Tava",
+    "24 cm Kısa Tencere",
+    "16/22 cm Derin Tencere"
+  ],
+  "Ingenio Unlimited Tit 6X Büyük Set 12parça": [
+    "26/28 cm Tava",
+    "28 cm Wok Tava",
+    "24 cm Sote Tavası",
+    "22 cm Tencere"
+  ],
+  "Ingenio Unlimited Tit 6X Küçük Set 3parça": [
+    "24/28 cm Tava"
+  ],
+  "Ingenio Simple Cook Tit 1X Küçük Set 3parça": [
+    "24/28 cm Tava"
+  ],
+  "Ingenio Ceramic Renew Küçük Set 3 Parça IND": [
+    "24/28 cm Tava"
+  ],
+  "Ingenio Experience Fusion Core 9X Büyük Set 11 parça": [
+    "26/28 cm Tava",
+    "28 cm Wok Tava",
+    "24 cm Kısa Tencere",
+    "20 cm Sos Tenceresi"
+  ],
+  "Ingenio Explore Fusion Core 9X Küçük Set 3 parça": [
+    "24/28 cm Tava"
+  ],
+  "Ingenio Preference Tit 6X Orta Set 7parça": [
+    "24/28 cm Tava",
+    "24 cm Sote Tavası"
+  ],
+  "Ingenio Excellence+ Fusion Core 9X Büyük Set 12 parça": [
+    "26/28 cm Tava",
+    "28 cm Wok Tava",
+    "24 cm Kısa Tencere",
+    "20 cm Sos Tenceresi"
+  ],
+  "Ingenio Unlimited Tit 6X Maxi Set 22 parça": [
+    "22/24/28 cm Tava",
+    "26 cm Wok Tava",
+    "16/18/20 cm Tencere"
+  ],
+  "2X XL FORCE": [
+    "20/24/26/28/32 cm Tava",
+    "28 cm Wok Tava",
+    "25 cm Krep Tava"
+  ],
+  "XL ıntense": [
+    "20/24/26/28/30 cm Tava",
+    "28 cm Wok Tava",
+    "25 cm Krep Tava"
+  ],
+  "Tefal Ingenio Expertise 5X Büyük Set - 12 parça": [
+    "26/28 cm Tava",
+    "26 cm Wok Tava",
+    "24 cm Kısa Tencere",
+    "20 cm Sos Tenceresi"
+  ],
+  "Renew Ceramic": [
+    "20 cm Sahan",
+    "24 cm Kısa Tencere"
   ]
 }
