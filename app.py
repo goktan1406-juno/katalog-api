@@ -14,6 +14,19 @@ from reportlab.lib.utils import ImageReader
 from PIL import Image
 import reportlab
 
+def call_llm(prompt, max_tokens=300):
+    """Shared text-generation call for all the small NLP tasks in this pipeline
+    (translation, tech-spec extraction, summarization). Uses OpenAI — swap the
+    model name here if migrating providers again."""
+    from openai import OpenAI
+    client = OpenAI()
+    resp = client.chat.completions.create(
+        model="gpt-4o-mini",
+        max_tokens=max_tokens,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return resp.choices[0].message.content.strip()
+
 app = Flask(__name__)
 # Werkzeug 3.1+ caps non-file form fields (e.g. prev_state_json, which grows as the
 # catalog accumulates products) at 500KB by default; raise it so accumulated state
@@ -621,8 +634,6 @@ def ensure_benefits_turkish(benefits):
     if not any(h in combined for h in _ENGLISH_BULLET_HINTS):
         return benefits
     try:
-        import anthropic
-        client = anthropic.Anthropic()
         prompt = (
             f"Asagidaki {len(titles)} urun ozelligi maddesini incele. Ingilizce "
             "olanlari Turkceye cevir, zaten Turkce olanlari degistirmeden ayni "
@@ -630,11 +641,8 @@ def ensure_benefits_turkish(benefits):
             "sirada, numara veya tire koyma, baska hicbir aciklama ekleme.\n\n"
             + '\n'.join(titles)
         )
-        message = client.messages.create(
-            model="claude-haiku-4-5", max_tokens=400,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        lines = [l.strip(' -•\t') for l in message.content[0].text.strip().split('\n') if l.strip()]
+        text = call_llm(prompt, max_tokens=400)
+        lines = [l.strip(' -•\t') for l in text.split('\n') if l.strip()]
         if len(lines) == len(titles):
             return [(lines[i], benefits[i][1]) for i in range(len(titles))]
         return benefits
@@ -645,8 +653,6 @@ def ensure_benefits_turkish(benefits):
 def summarize_highlights(highlights_text):
     """Use Claude Haiku to turn a long highlights/description paragraph into short bullet points."""
     try:
-        import anthropic
-        client = anthropic.Anthropic()
         prompt = (
             "Asagidaki urun tanitim metnini katalog kartinda gosterilecek kisa "
             "maddeler halinde ozetle. Her madde en fazla 6-8 kelime olsun, "
@@ -654,12 +660,8 @@ def summarize_highlights(highlights_text):
             "numara veya tire koyma, baska hicbir aciklama ekleme.\n\n"
             f"Metin: {highlights_text}"
         )
-        message = client.messages.create(
-            model="claude-haiku-4-5",
-            max_tokens=300,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        lines = [l.strip(' -•\t') for l in message.content[0].text.strip().split('\n') if l.strip()]
+        text = call_llm(prompt, max_tokens=300)
+        lines = [l.strip(' -•\t') for l in text.split('\n') if l.strip()]
         lines = [l for l in lines if not _is_world_number_one_claim(l)]
         return [(l, '') for l in lines[:6]]
     except Exception as e:
@@ -730,8 +732,6 @@ def extract_tech_bullets(tech_pairs, product_name='', category_context='', count
     if not tech_pairs:
         return []
     try:
-        import anthropic
-        client = anthropic.Anthropic()
         table_text = '\n'.join(f'{k}: {v}' for k, v in tech_pairs.items())
         priority_hint, priority_count = _match_category_hints(f'{category_context} {product_name}')
         if priority_count:
@@ -755,12 +755,8 @@ def extract_tech_bullets(tech_pairs, product_name='', category_context='', count
             "koyma, baska hicbir aciklama ekleme.\n\n"
             f"Tablo:\n{table_text}"
         )
-        message = client.messages.create(
-            model="claude-haiku-4-5",
-            max_tokens=150,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        lines = [l.strip(' -•\t') for l in message.content[0].text.strip().split('\n') if l.strip()]
+        text = call_llm(prompt, max_tokens=150)
+        lines = [l.strip(' -•\t') for l in text.split('\n') if l.strip()]
         # Discard hedging/refusal-style responses (long sentences, questions) —
         # a real bullet is short; keep only lines that actually look like one.
         lines = [l for l in lines if len(l) <= 60 and '?' not in l]
@@ -824,8 +820,6 @@ def ensure_kitchenware_name_turkish(name):
     if not any(h in name.lower() for h in _ENGLISH_NAME_HINTS):
         return name
     try:
-        import anthropic
-        client = anthropic.Anthropic()
         prompt = (
             "Asagida bir mutfak urununun adi var. Ingilizce kelimeleri Turkceye "
             "cevir (ornek: 'Knife' -> 'Bicak', 'Steel' -> 'Celik', 'Set' -> 'Set', "
@@ -834,11 +828,7 @@ def ensure_kitchenware_name_turkish(name):
             "birak. Sadece cevrilmis urun adini yaz, baska hicbir aciklama ekleme.\n\n"
             f"{name}"
         )
-        message = client.messages.create(
-            model="claude-haiku-4-5", max_tokens=100,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        translated = message.content[0].text.strip().strip('"')
+        translated = call_llm(prompt, max_tokens=100).strip('"')
         return translated or name
     except Exception as e:
         print(f"Name translate error: {e}")

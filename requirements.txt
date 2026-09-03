@@ -3,4 +3,4 @@ reportlab
 openpyxl
 pillow
 gunicorn
-anthropic
+openai
