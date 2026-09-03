@@ -487,8 +487,15 @@ def draw_card(cv, x, y, cw, ch, product):
     bottom_limit = y - ch + 3*mm
 
     # Cap bullets lower when there's a size table to show — otherwise 6 bullets
-    # routinely fill the card and leave no room for it at all.
-    max_bullets = 4 if product.get('size_table') else 6
+    # routinely fill the card and leave no room for it at all. Longer size
+    # tables (lids, handles, multiple pan types) need even more room back.
+    _st_len = len(product.get('size_table') or [])
+    if _st_len > 4:
+        max_bullets = 2
+    elif _st_len > 0:
+        max_bullets = 4
+    else:
+        max_bullets = 6
     for title, _ in product.get('benefits', [])[:max_bullets]:
         if ty - 3.5*mm < bottom_limit: break
         text = str(title)
