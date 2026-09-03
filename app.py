@@ -321,7 +321,18 @@ def parse_xlsm(xlsm_bytes, filename=None, force_category=None):
     # KITCHENWARE & DINNER uses the same name handling as every other category now
     # (plain trim + translate, category-based tech-spec hints) rather than its own
     # range/size-table/color-circle machinery.
-    name = strip_product_code_from_name(translate_name_to_turkish(trim_name_to_core(raw_name)))
+    name = translate_name_to_turkish(trim_name_to_core(raw_name))
+    if category == 'LINEN CARE':
+        # LINEN CARE keeps its model code (e.g. 'GV9820') next to the name —
+        # customers recognize the product by that code specifically. Strip
+        # whatever's embedded (avoids duplicates/casing drift) and append the
+        # canonical Product Reference instead.
+        code = get('Product Reference')
+        name = strip_product_code_from_name(name)
+        if code:
+            name = f'{name} {code}'
+    else:
+        name = strip_product_code_from_name(name)
     range_field = get('Family L2') or get('Range name') or get('Range') or get('Series')
     is_individual_bakeware = False
     if category == 'COOKWARE & BAKEWARE' and filename and not _is_generic_export_filename(filename):
